@@ -6,7 +6,7 @@ import { Bus, MapPin, ShieldCheck, QrCode, CreditCard, Users } from "lucide-reac
 export default function Index() {
   return (
     <div>
-      {/* TODO: Hero — Persona 4 */}
+      {/* TODO: Hero — Buscador*/}
 
       {/* Beneficios */}
       <section className="container py-16 md:py-20">
@@ -34,6 +34,29 @@ export default function Index() {
             </Card>
           ))}
         </div>
+      </section>
+
+       {/* CTA */}
+      <section className="container pb-20">
+        <Card className="p-8 md:p-12 text-center bg-primary text-primary-foreground border-0">
+          <h2 className="text-2xl md:text-3xl font-bold mb-3">¿Listo para tu próximo viaje?</h2>
+          <p className="text-primary-foreground/80 mb-6 max-w-xl mx-auto">
+            Crea tu cuenta gratis y empieza a reservar boletos en segundos.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Button variant="secondary" size="lg" asChild>
+              <Link to="/auth?tab=signup">Crear cuenta</Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10"
+              asChild
+            >
+              <Link to="/buscar">Buscar viajes</Link>
+            </Button>
+          </div>
+        </Card>
       </section>
 
     </div>
