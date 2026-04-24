@@ -5,7 +5,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-const Index = () => <div className="p-8 text-2xl font-bold">Página Principal</div>;
+import Index from "./pages/Index";
+
 const Auth = () => <div className="p-8 text-2xl font-bold">Login / Register</div>;
 const NotFound = () => <div className="p-8 text-2xl font-bold">404 — Página no encontrada</div>;
 
