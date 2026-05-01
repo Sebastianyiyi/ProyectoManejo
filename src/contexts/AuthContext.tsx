@@ -1,4 +1,6 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface User {
   name: string;
@@ -8,25 +10,46 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  signOut: () => void;
+  loading: boolean;
+  signOut: () => Promise<void>;
   hasRole: (role: string) => boolean;
-  simulateLogin: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+function mapSupabaseUser(su: SupabaseUser): User {
+  return {
+    name: su.user_metadata?.full_name ?? su.email ?? "",
+    email: su.email ?? "",
+    role: su.user_metadata?.role ?? "passenger",
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const signOut = () => setUser(null);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ? mapSupabaseUser(session.user) : null);
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ? mapSupabaseUser(session.user) : null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+  };
 
   const hasRole = (role: string) => user?.role === role;
 
-  const simulateLogin = () =>
-    setUser({ name: "Juan Pérez", email: "juan@test.com", role: "passenger" });
-
   return (
-    <AuthContext.Provider value={{ user, signOut, hasRole, simulateLogin }}>
+    <AuthContext.Provider value={{ user, loading, signOut, hasRole }}>
       {children}
     </AuthContext.Provider>
   );
