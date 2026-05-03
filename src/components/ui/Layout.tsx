@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Bus, LogOut, Menu, X } from "lucide-react";
+import { Bus, LogOut, Menu, X, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import {
@@ -26,11 +26,17 @@ export function Layout() {
       <NavLink to="/buscar" className={({ isActive }) =>
         `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-foreground/70 hover:text-foreground'}`
       }>Buscar viajes</NavLink>
-      
+
       {user && (
         <NavLink to="/mis-reservas" className={({ isActive }) =>
           `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-foreground/70 hover:text-foreground'}`
         }>Mis reservas</NavLink>
+      )}
+
+      {(isAdmin || isOficinista) && (
+        <NavLink to="/dashboard" className={({ isActive }) =>
+          `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-foreground/70 hover:text-foreground'}`
+        }>Panel de gestión</NavLink>
       )}
     </>
   );
@@ -59,6 +65,14 @@ export function Layout() {
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>Mi cuenta</DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  {(isAdmin || isOficinista) && (
+                    <>
+                      <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                        <LayoutDashboard className="mr-2 h-4 w-4" /> Panel de gestión
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem onClick={() => navigate('/mis-reservas')}>Mis reservas</DropdownMenuItem>
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
@@ -107,6 +121,6 @@ export function Layout() {
           <p>Hecho para cooperativas de transporte del Ecuador.</p>
         </div>
       </footer>
-    </div> 
+    </div>
   );
 }
