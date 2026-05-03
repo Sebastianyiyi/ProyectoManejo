@@ -33,29 +33,62 @@ async function fetchUserWithRole(su: SupabaseUser): Promise<User> {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  // loading empieza en true y solo se pone false cuando TODO está listo
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
-        const u = await fetchUserWithRole(session.user);
-        setUser(u);
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
+    let ignore = false;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        const u = await fetchUserWithRole(session.user);
-        setUser(u);
-      } else {
-        setUser(null);
-      }
-    });
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
 
-    return () => subscription.unsubscribe();
+      if (session?.user && !ignore) {
+        try {
+          const u = await fetchUserWithRole(session.user);
+          if (!ignore) setUser(u);
+        } catch {
+          if (!ignore) setUser({
+            name: session.user.user_metadata?.full_name ?? session.user.email ?? "",
+            email: session.user.email ?? "",
+            role: "passenger",
+          });
+        }
+      }
+
+      if (!ignore) setLoading(false);
+    }
+
+    init();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session?.user) {
+          setLoading(true); // vuelve a loading mientras busca el rol
+          fetchUserWithRole(session.user)
+            .then((u) => {
+              setUser(u);
+            })
+            .catch(() => {
+              setUser({
+                name: session.user!.user_metadata?.full_name ?? session.user!.email ?? "",
+                email: session.user!.email ?? "",
+                role: "passenger",
+              });
+            })
+            .finally(() => {
+              setLoading(false);
+            });
+        } else {
+          setUser(null);
+          setLoading(false);
+        }
+      }
+    );
+
+    return () => {
+      ignore = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
