@@ -17,11 +17,17 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-function mapSupabaseUser(su: SupabaseUser): User {
+async function fetchUserWithRole(su: SupabaseUser): Promise<User> {
+  const { data } = await supabase
+    .from("usuarios")
+    .select("full_name, rol")
+    .eq("email", su.email)
+    .single();
+
   return {
-    name: su.user_metadata?.full_name ?? su.email ?? "",
+    name: data?.full_name ?? su.user_metadata?.full_name ?? su.email ?? "",
     email: su.email ?? "",
-    role: su.user_metadata?.role ?? "passenger",
+    role: data?.rol ?? "passenger",
   };
 }
 
@@ -30,13 +36,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ? mapSupabaseUser(session.user) : null);
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const u = await fetchUserWithRole(session.user);
+        setUser(u);
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ? mapSupabaseUser(session.user) : null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        const u = await fetchUserWithRole(session.user);
+        setUser(u);
+      } else {
+        setUser(null);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -44,9 +60,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setUser(null);
   };
 
-  const hasRole = (role: string) => user?.role === role;
+  const hasRole = (...roles: string[]) => roles.includes(user?.role ?? "");
 
   return (
     <AuthContext.Provider value={{ user, loading, signOut, hasRole }}>
