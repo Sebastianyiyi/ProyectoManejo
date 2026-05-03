@@ -6,23 +6,20 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function Layout() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
-  // --- SIMULACIÓN DE FRONTEND (Sin Backend) ---
-  // Cambia user a null para ver cómo se ve sin iniciar sesión
-  // Cambia user a { email: 'test@correo.com' } para ver el menú de usuario
-  const user = null; 
-  const isAdmin = false;
-  const isOficinista = false;
+  const { user, signOut } = useAuth();
+  const isAdmin = user?.role === "administrador";
+  const isOficinista = user?.role === "oficinista";
 
-  const handleSignOut = () => {
-    console.log("Simulación: Cerrando sesión");
+  const handleSignOut = async () => {
+    await signOut();
     navigate("/");
   };
-  // --------------------------------------------
 
   const navLinks = (
     <>
