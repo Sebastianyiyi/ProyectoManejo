@@ -4,11 +4,11 @@ import { Bus, LayoutDashboard, Map, Users, Ticket, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const NAV = [
-  { to: "/dashboard",        label: "Inicio",   icon: LayoutDashboard, end: true },
-  { to: "/dashboard/buses",  label: "Buses",    icon: Bus },
-  { to: "/dashboard/rutas",  label: "Rutas",    icon: Map },
+  { to: "/dashboard", label: "Inicio", icon: LayoutDashboard, end: true },
+  { to: "/dashboard/buses", label: "Buses", icon: Bus },
+  { to: "/dashboard/rutas", label: "Rutas", icon: Map },
   { to: "/dashboard/usuarios", label: "Usuarios", icon: Users },
-  { to: "/dashboard/boletos", label: "Boletos",  icon: Ticket },
+  { to: "/dashboard/boletos", label: "Boletos", icon: Ticket },
 ];
 
 export default function DashboardLayout() {
@@ -16,7 +16,8 @@ export default function DashboardLayout() {
 
   if (loading) return <div className="flex h-screen items-center justify-center">Cargando...</div>;
 
-  if (!user || !hasRole("administrador", "oficinista")) {
+  // Solo redirigir si YA terminó de cargar y no tiene rol
+  if (!loading && (!user || (!hasRole("administrador") && !hasRole("oficinista")))) {
     return <Navigate to="/" replace />;
   }
 
@@ -39,10 +40,9 @@ export default function DashboardLayout() {
               to={to}
               end={end}
               className={({ isActive }) =>
-                `flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                  isActive
-                    ? "bg-primary text-primary-foreground font-medium"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                `flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${isActive
+                  ? "bg-primary text-primary-foreground font-medium"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`
               }
             >
