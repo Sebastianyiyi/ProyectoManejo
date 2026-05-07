@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import Buscar from "./pages/Buscar";
 import { Layout } from "./components/ui/Layout";
 
 const NotFound = () => <div className="p-8 text-2xl font-bold">404 — Página no encontrada</div>;
@@ -24,6 +25,7 @@ const App = () => (
             <Route element={<Layout />}>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/buscar" element={<Buscar />} /> 
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
