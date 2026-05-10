@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Bus, MapPin, ShieldCheck, QrCode, CreditCard, Users, MapIcon, CalendarIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -7,14 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function Index() {
+    const navigate = useNavigate();
     const [origen, setOrigen] = useState("");
     const [destino, setDestino] = useState("");
     const [fecha, setFecha] = useState("");
 
     const handleSearch = () => {
-        console.log({ origen, destino, fecha });
-    };
-
+    if (!origen || !destino || !fecha) {
+        alert("Completa todos los campos para buscar");
+    return;
+    }
+    navigate(`/buscar?origen=${origen}&destino=${destino}&fecha=${fecha}`);
+};
     return (
         <>
             {/* SECCIÓN HERO (Persona 4) */}
