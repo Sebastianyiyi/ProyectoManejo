@@ -5,14 +5,20 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { lazy, Suspense } from "react";
-const PaginaCompra = lazy(() => import("./pages/PaginaCompra"));
-import Buscar from "./pages/Buscar";
 
+const PaginaCompra = lazy(() => import("./pages/PaginaCompra"));
+
+import Buscar from "./pages/Buscar";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ChoferDashboard from "./pages/ChoferDashboard";
 import { Layout } from "./components/ui/Layout";
 
-const NotFound = () => <div className="p-8 text-2xl font-bold">404 — Página no encontrada</div>;
+const NotFound = () => (
+  <div className="p-8 text-2xl font-bold">
+    404 — Página no encontrada
+  </div>
+);
 
 const queryClient = new QueryClient();
 
@@ -28,15 +34,20 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/buscar" element={<Buscar />} />
               <Route path="/auth" element={<Auth />} />
-<Route path="/compra/:viajeId" element={
-  <Suspense fallback={<div>Cargando...</div>}>
-    <PaginaCompra />
-  </Suspense>
-} />              
+              <Route path="/chofer" element={<ChoferDashboard />} />
+
+              <Route
+                path="/compra/:viajeId"
+                element={
+                  <Suspense fallback={<div>Cargando...</div>}>
+                    <PaginaCompra />
+                  </Suspense>
+                }
+              />
+
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
-          
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
