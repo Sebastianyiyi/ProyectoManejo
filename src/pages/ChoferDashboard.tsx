@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   CalendarDays,
@@ -10,6 +10,8 @@ import {
   QrCode,
   CheckCircle2,
   AlertTriangle,
+  Camera,
+  CameraOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
+import { Html5Qrcode } from "html5-qrcode";
 
 interface RutaInfo {
   ciudad_origen: string;
@@ -422,6 +425,7 @@ function normalizarBoleto(data: BoletoValidacionSupabase): BoletoValidacion {
   };
 }
 
+const QR_READER_ID = "qr-reader-chofer";
 export default function ChoferDashboard() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
@@ -434,6 +438,9 @@ export default function ChoferDashboard() {
   const [buscandoBoleto, setBuscandoBoleto] = useState(false);
   const [validandoAsistencia, setValidandoAsistencia] = useState(false);
 
+  const qrScannerRef = useRef<Html5Qrcode | null>(null);
+  const [camaraActiva, setCamaraActiva] = useState(false);
+  const [iniciandoCamara, setIniciandoCamara] = useState(false);
   useEffect(() => {
     if (loading) return;
 
@@ -501,6 +508,96 @@ export default function ChoferDashboard() {
 
     cargarViajes();
   }, [user]);
+
+  const detenerCamara = async () => {
+    const scanner = qrScannerRef.current;
+
+    if (!scanner) {
+      setCamaraActiva(false);
+      return;
+    }
+
+    try {
+      await scanner.stop();
+    } catch (error) {
+      console.warn("La cámara ya estaba detenida o no pudo detenerse:", error);
+    }
+
+    try {
+      await scanner.clear();
+    } catch (error) {
+      console.warn("No se pudo limpiar el lector QR:", error);
+    }
+
+    qrScannerRef.current = null;
+    setCamaraActiva(false);
+  };
+
+  const iniciarCamara = async () => {
+    if (camaraActiva || iniciandoCamara) return;
+
+    setIniciandoCamara(true);
+
+    try {
+      const scanner = new Html5Qrcode(QR_READER_ID);
+      qrScannerRef.current = scanner;
+
+      await scanner.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: {
+            width: 250,
+            height: 250,
+          },
+        },
+        async (decodedText) => {
+          const codigoEscaneado = decodedText.trim();
+
+          setCodigoQR(codigoEscaneado);
+          toast.success("Código QR escaneado correctamente.");
+
+          await detenerCamara();
+        },
+        () => {
+          // Esta función se ejecuta constantemente mientras busca un QR.
+          // La dejamos vacía para no llenar la consola con mensajes.
+        }
+      );
+
+      setCamaraActiva(true);
+    } catch (error) {
+      console.error("Error al iniciar la cámara:", error);
+      toast.error(
+        "No se pudo activar la cámara. Revisa los permisos del navegador."
+      );
+    } finally {
+      setIniciandoCamara(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      const scanner = qrScannerRef.current;
+
+      if (!scanner) return;
+
+      scanner
+        .stop()
+        .catch(() => {
+          // La cámara puede ya estar detenida.
+        })
+        .finally(() => {
+          try {
+            scanner.clear();
+          } catch {
+            // El lector puede ya estar limpio.
+          }
+
+          qrScannerRef.current = null;
+        });
+    };
+  }, []);
 
   const buscarBoletoPorQR = async () => {
     const codigoLimpio = codigoQR.trim();
@@ -742,9 +839,13 @@ export default function ChoferDashboard() {
     toast.success("Asistencia registrada correctamente.");
   };
 
-  const limpiarBusquedaQR = () => {
+  const limpiarBusquedaQR = async () => {
     setCodigoQR("");
     setBoletoEncontrado(null);
+
+    if (camaraActiva) {
+      await detenerCamara();
+    }
   };
 
   if (loading) {
@@ -896,6 +997,42 @@ export default function ChoferDashboard() {
                 </p>
               </div>
             </div>
+
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  type="button"
+                  variant={camaraActiva ? "destructive" : "outline"}
+                  onClick={camaraActiva ? detenerCamara : iniciarCamara}
+                  disabled={iniciandoCamara}
+                >
+                  {iniciandoCamara ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : camaraActiva ? (
+                    <CameraOff className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Camera className="h-4 w-4 mr-2" />
+                  )}
+
+                  {iniciandoCamara
+                    ? "Activando cámara..."
+                    : camaraActiva
+                    ? "Detener cámara"
+                    : "Activar cámara"}
+                </Button>
+
+                <p className="text-sm text-muted-foreground flex items-center">
+                  También puedes escribir o corregir manualmente el código QR.
+               </p>
+              </div>
+
+              <div
+                id={QR_READER_ID}
+                className={`overflow-hidden rounded-lg border bg-muted/30 ${
+                  camaraActiva || iniciandoCamara ? "block" : "hidden"
+               }`}
+             />
+          </div>
 
             <div className="grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-end">
               <div className="space-y-2">
