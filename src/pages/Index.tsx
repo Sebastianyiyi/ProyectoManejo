@@ -8,17 +8,19 @@ import { Label } from "@/components/ui/label";
 
 export default function Index() {
     const navigate = useNavigate();
-    
     const [origen, setOrigen] = useState("");
     const [destino, setDestino] = useState("");
     const [fecha, setFecha] = useState("");
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
+        if (!origen || !destino || !fecha) {
+            alert("Completa todos los campos para buscar");
+            return;
+        }
         const params = new URLSearchParams({ origen, destino, fecha });
         navigate(`/buscar?${params.toString()}`);
     };
-
     return (
         <>
             {/* SECCIÓN HERO (Persona 4) */}
