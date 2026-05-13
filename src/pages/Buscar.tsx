@@ -9,13 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+// Interfaz de VladAlz con cooperativas anidadas en buses
 interface Viaje {
   id: number;
   fecha_salida: string;
   fecha_llegada_est: string;
   precio_base: number;
-  ruta_id: number;
-  bus_id: number;
+  estado: string;
   rutas: {
     ciudad_origen: string;
     ciudad_destino: string;
@@ -25,6 +25,12 @@ interface Viaje {
   buses: {
     tipo: string;
     capacidad: number;
+    placa: string;
+    cooperativas: {
+      id: string;
+      nombre: string;
+      logo_url: string | null;
+    } | null;
   } | null;
 }
 
@@ -36,8 +42,9 @@ export default function Buscar() {
   const [origen, setOrigen] = useState(params.get("origen") || "");
   const [destino, setDestino] = useState(params.get("destino") || "");
   const [fecha, setFecha] = useState(params.get("fecha") || today);
-  const [tipo, setTipo] = useState<string>(params.get("tipo") || "todos");
+  const [tipo, setTipo] = useState(params.get("tipo") || "todos");
 
+  // Autocompletado (tu implementación)
   const [ciudades, setCiudades] = useState<string[]>([]);
   const [sugerenciasOrigen, setSugerenciasOrigen] = useState<string[]>([]);
   const [sugerenciasDestino, setSugerenciasDestino] = useState<string[]>([]);
@@ -45,6 +52,7 @@ export default function Buscar() {
   const [resultados, setResultados] = useState<Viaje[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Cargar ciudades desde rutas para el autocompletado
   useEffect(() => {
     const cargarCiudades = async () => {
       const { data } = await supabase
@@ -59,31 +67,35 @@ export default function Buscar() {
     cargarCiudades();
   }, []);
 
+  // Consulta de VladAlz con timezone y estado programado
   const buscar = async () => {
     setLoading(true);
 
-    let qRutas = supabase.from("rutas").select("id");
-    if (origen.trim()) qRutas = qRutas.ilike("ciudad_origen", `%${origen.trim()}%`);
-    if (destino.trim()) qRutas = qRutas.ilike("ciudad_destino", `%${destino.trim()}%`);
-
-    const { data: rutasData } = await qRutas;
-    const rutaIds = (rutasData ?? []).map((r) => r.id);
-
-    if (rutaIds.length === 0) {
-      setResultados([]);
-      setLoading(false);
-      return;
-    }
+    const fechaInicio = `${fecha}T00:00:00-05:00`;
+    const fechaFin = `${fecha}T23:59:59-05:00`;
 
     const { data } = await supabase
       .from("viajes")
-      .select("*, rutas(ciudad_origen, ciudad_destino, distancia_km, duracion_minutos), buses(tipo, capacidad)")
-      .in("ruta_id", rutaIds)
-      .gte("fecha_salida", `${fecha}T00:00:00`)
-      .lte("fecha_salida", `${fecha}T23:59:59`)
+      .select(`
+        id, fecha_salida, fecha_llegada_est, precio_base, estado,
+        rutas (ciudad_origen, ciudad_destino, distancia_km, duracion_minutos),
+        buses (tipo, capacidad, placa, cooperativas (id, nombre, logo_url))
+      `)
+      .eq("estado", "programado")
+      .gte("fecha_salida", fechaInicio)
+      .lte("fecha_salida", fechaFin)
       .order("fecha_salida");
 
-    let res = (data ?? []) as Viaje[];
+    let res = (data ?? []) as unknown as Viaje[];
+
+    if (origen.trim())
+      res = res.filter((v) =>
+        v.rutas?.ciudad_origen?.toLowerCase().includes(origen.trim().toLowerCase())
+      );
+    if (destino.trim())
+      res = res.filter((v) =>
+        v.rutas?.ciudad_destino?.toLowerCase().includes(destino.trim().toLowerCase())
+      );
     if (tipo !== "todos") res = res.filter((v) => v.buses?.tipo === tipo);
 
     setResultados(res);
@@ -98,16 +110,12 @@ export default function Buscar() {
     buscar();
   };
 
-  const calcularDuracion = (salida: string, llegada: string) => {
-    const diff = new Date(llegada).getTime() - new Date(salida).getTime();
-    return Math.round(diff / 60000);
-  };
-
   return (
     <div className="container py-8">
       <Card className="p-4 md:p-6 mb-6">
         <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-5 gap-3">
 
+          {/* Origen con autocompletado */}
           <div className="space-y-1.5 col-span-2 md:col-span-1">
             <Label>Origen</Label>
             <div className="relative">
@@ -142,6 +150,7 @@ export default function Buscar() {
             </div>
           </div>
 
+          {/* Destino con autocompletado */}
           <div className="space-y-1.5 col-span-2 md:col-span-1">
             <Label>Destino</Label>
             <div className="relative">
@@ -216,8 +225,11 @@ export default function Buscar() {
               <div className="flex flex-col md:flex-row md:items-center gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    {v.buses?.tipo === "vip" && <Badge className="bg-accent text-accent-foreground">VIP</Badge>}
-                    {v.buses?.tipo === "normal" && <Badge variant="secondary">Normal</Badge>}
+                    <Badge variant="secondary">{v.buses?.cooperativas?.nombre}</Badge>
+                    {v.buses?.tipo === "vip" && (
+                      <Badge className="bg-accent text-accent-foreground">VIP</Badge>
+                    )}
+                    <span className="text-xs text-muted-foreground">{v.buses?.placa}</span>
                   </div>
                   <div className="flex items-center gap-3 text-foreground">
                     <div>
@@ -232,17 +244,18 @@ export default function Buscar() {
                       <Bus className="h-4 w-4 absolute -top-2 left-1/2 -translate-x-1/2 text-muted-foreground bg-card" />
                     </div>
                     <div className="text-right">
-                      <div className="font-semibold text-lg">→ {v.rutas?.ciudad_destino}</div>
+                      <div className="font-semibold text-lg">
+                        {new Date(v.fecha_llegada_est).toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" })}
+                      </div>
                       <div className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
-                        <Clock className="h-3 w-3" />
-                        {calcularDuracion(v.fecha_salida, v.fecha_llegada_est)} min
+                        <Clock className="h-3 w-3" />{v.rutas?.ciudad_destino}
                       </div>
                     </div>
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2 md:border-l md:pl-4">
                   <div className="text-2xl font-bold text-primary">${Number(v.precio_base).toFixed(2)}</div>
-                  <Button onClick={() => navigate(`/viajes/${v.id}/asientos`)}>
+                  <Button onClick={() => navigate(`/compra/${v.id}`)}>
                     Elegir asientos
                   </Button>
                 </div>
