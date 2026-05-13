@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { Loader2, Bus, Clock, MapPin } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,9 +99,7 @@ export default function Buscar() {
     setLoading(false);
   };
 
-  useEffect(() => { buscar(); /* eslint-disable-next-line */ }, []);
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: { preventDefault(): void }) => {
     e.preventDefault();
     setParams({ origen, destino, fecha, tipo });
     buscar();
@@ -189,7 +188,12 @@ export default function Buscar() {
 
           <div className="space-y-1.5">
             <Label>Fecha</Label>
-            <Input type="date" min={today} value={fecha} onChange={(e) => setFecha(e.target.value)} />
+            <Input
+              type="date"
+              min={today}
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+            />
           </div>
 
           <div className="space-y-1.5">
@@ -214,14 +218,21 @@ export default function Buscar() {
         <div className="py-16 grid place-items-center">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
+        <div className="py-16 grid place-items-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
       ) : resultados.length === 0 ? (
         <Card className="p-12 text-center">
           <Bus className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
           <h3 className="font-semibold mb-1">No encontramos viajes</h3>
-          <p className="text-sm text-muted-foreground">Prueba ajustando los filtros o cambia la fecha.</p>
+          <p className="text-sm text-muted-foreground">
+            Prueba ajustando los filtros o cambia la fecha.
+          </p>
         </Card>
       ) : (
         <div className="space-y-3">
+          {resultados.map((v) => (
+            <Card key={v.id} className="p-4 md:p-5 hover:shadow-md transition-shadow">
           {resultados.map((v) => (
             <Card key={v.id} className="p-4 md:p-5 hover:shadow-md transition-shadow">
               <div className="flex flex-col md:flex-row md:items-center gap-4">
@@ -244,7 +255,7 @@ export default function Buscar() {
                       </div>
                     </div>
                     <div className="flex-1 border-t border-dashed border-border relative">
-                      <Bus className="h-4 w-4 absolute -top-2 left-1/2 -translate-x-1/2 text-muted-foreground bg-card px-0.5" />
+                      <Bus className="h-4 w-4 absolute -top-2 left-1/2 -translate-x-1/2 text-muted-foreground bg-card" />
                     </div>
                     <div className="text-right">
                       <div className="font-semibold text-lg">→ {v.rutas?.ciudad_destino}</div>
