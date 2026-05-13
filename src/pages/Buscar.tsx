@@ -8,9 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Bus, Clock, MapPin } from "lucide-react";
 
-// ✅ CAMBIO: interface adaptada a las tablas reales (viajes + rutas)
 interface Viaje {
   id: number;
   fecha_salida: string;
@@ -47,7 +45,6 @@ export default function Buscar() {
   const [resultados, setResultados] = useState<Viaje[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // ✅ CAMBIO: ciudades desde tabla rutas (ciudad_origen y ciudad_destino)
   useEffect(() => {
     const cargarCiudades = async () => {
       const { data } = await supabase
@@ -65,10 +62,7 @@ export default function Buscar() {
   const buscar = async () => {
     setLoading(true);
 
-    // ✅ CAMBIO: primero buscamos las rutas que coincidan con origen/destino
-    let qRutas = supabase
-      .from("rutas")
-      .select("id");
+    let qRutas = supabase.from("rutas").select("id");
     if (origen.trim()) qRutas = qRutas.ilike("ciudad_origen", `%${origen.trim()}%`);
     if (destino.trim()) qRutas = qRutas.ilike("ciudad_destino", `%${destino.trim()}%`);
 
@@ -81,8 +75,7 @@ export default function Buscar() {
       return;
     }
 
-    // ✅ CAMBIO: luego buscamos viajes que usen esas rutas y coincidan con la fecha
-    let q = supabase
+    const { data } = await supabase
       .from("viajes")
       .select("*, rutas(ciudad_origen, ciudad_destino, distancia_km, duracion_minutos), buses(tipo, capacidad)")
       .in("ruta_id", rutaIds)
@@ -90,22 +83,21 @@ export default function Buscar() {
       .lte("fecha_salida", `${fecha}T23:59:59`)
       .order("fecha_salida");
 
-    const { data } = await q;
     let res = (data ?? []) as Viaje[];
-
     if (tipo !== "todos") res = res.filter((v) => v.buses?.tipo === tipo);
 
     setResultados(res);
     setLoading(false);
   };
 
-  const handleSubmit = (e: { preventDefault(): void }) => {
+  useEffect(() => { buscar(); /* eslint-disable-next-line */ }, []);
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setParams({ origen, destino, fecha, tipo });
     buscar();
   };
 
-  // Helper para calcular duración entre dos timestamps
   const calcularDuracion = (salida: string, llegada: string) => {
     const diff = new Date(llegada).getTime() - new Date(salida).getTime();
     return Math.round(diff / 60000);
@@ -116,7 +108,6 @@ export default function Buscar() {
       <Card className="p-4 md:p-6 mb-6">
         <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-5 gap-3">
 
-          {/* Input Origen con autocomplete */}
           <div className="space-y-1.5 col-span-2 md:col-span-1">
             <Label>Origen</Label>
             <div className="relative">
@@ -151,7 +142,6 @@ export default function Buscar() {
             </div>
           </div>
 
-          {/* Input Destino con autocomplete */}
           <div className="space-y-1.5 col-span-2 md:col-span-1">
             <Label>Destino</Label>
             <div className="relative">
@@ -188,12 +178,7 @@ export default function Buscar() {
 
           <div className="space-y-1.5">
             <Label>Fecha</Label>
-            <Input
-              type="date"
-              min={today}
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-            />
+            <Input type="date" min={today} value={fecha} onChange={(e) => setFecha(e.target.value)} />
           </div>
 
           <div className="space-y-1.5">
@@ -218,32 +203,21 @@ export default function Buscar() {
         <div className="py-16 grid place-items-center">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-        <div className="py-16 grid place-items-center">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
       ) : resultados.length === 0 ? (
         <Card className="p-12 text-center">
           <Bus className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
           <h3 className="font-semibold mb-1">No encontramos viajes</h3>
-          <p className="text-sm text-muted-foreground">
-            Prueba ajustando los filtros o cambia la fecha.
-          </p>
+          <p className="text-sm text-muted-foreground">Prueba ajustando los filtros o cambia la fecha.</p>
         </Card>
       ) : (
         <div className="space-y-3">
           {resultados.map((v) => (
             <Card key={v.id} className="p-4 md:p-5 hover:shadow-md transition-shadow">
-          {resultados.map((v) => (
-            <Card key={v.id} className="p-4 md:p-5 hover:shadow-md transition-shadow">
               <div className="flex flex-col md:flex-row md:items-center gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    {v.buses?.tipo === "vip" && (
-                      <Badge className="bg-accent text-accent-foreground">VIP</Badge>
-                    )}
-                    {v.buses?.tipo === "normal" && (
-                      <Badge variant="secondary">Normal</Badge>
-                    )}
+                    {v.buses?.tipo === "vip" && <Badge className="bg-accent text-accent-foreground">VIP</Badge>}
+                    {v.buses?.tipo === "normal" && <Badge variant="secondary">Normal</Badge>}
                   </div>
                   <div className="flex items-center gap-3 text-foreground">
                     <div>
