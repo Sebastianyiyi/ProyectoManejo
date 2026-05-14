@@ -1888,410 +1888,410 @@ export default function ChoferDashboard() {
                 <h2 className="text-xl font-semibold">Venta presencial durante el viaje</h2>
                 <p className="text-sm text-muted-foreground">
                   Registra boletos vendidos por el chofer durante un viaje indirecto en curso.
-        </p>
-      </div>
-    </div>
-
-    <div className="space-y-2">
-      <Label>Viaje asignado</Label>
-      <select
-        value={viajeVentaId}
-        onChange={(e) => {
-          setViajeVentaId(e.target.value);
-          setComprador(null);
-          setCedulaComprador("");
-          setAsientosSeleccionados([]);
-          setVentaExitosa(null);
-          setEfectivoRecibido("");
-        }}
-        className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-      >
-        <option value="">Selecciona un viaje</option>
-        {viajes.map((viaje) => (
-          <option key={viaje.id} value={viaje.id}>
-            Viaje #{viaje.id} - {viaje.rutas?.ciudad_origen} →{" "}
-            {viaje.rutas?.ciudad_destino} - {viaje.estado} - {viaje.tipo_viaje}
-          </option>
-        ))}
-      </select>
-    </div>
-
-    {viajeVenta && (
-      <div className="rounded-lg border p-4 space-y-3">
-        <h3 className="font-semibold">Información del viaje</h3>
-
-        <div className="grid md:grid-cols-2 gap-3 text-sm">
-          <p>
-            <span className="font-medium">Ruta:</span>{" "}
-            {viajeVenta.rutas?.ciudad_origen} → {viajeVenta.rutas?.ciudad_destino}
-          </p>
-
-          <p>
-            <span className="font-medium">Estado:</span> {viajeVenta.estado}
-          </p>
-
-          <p>
-            <span className="font-medium">Tipo:</span> {viajeVenta.tipo_viaje}
-          </p>
-
-          <p>
-            <span className="font-medium">Salida:</span>{" "}
-            {new Date(viajeVenta.fecha_salida).toLocaleString()}
-          </p>
-
-          <p>
-            <span className="font-medium">Bus:</span>{" "}
-            {viajeVenta.buses?.placa ?? "No asignado"}
-          </p>
-
-          <p>
-            <span className="font-medium">Precio base:</span> $
-            {viajeVenta.precio_base.toFixed(2)}
-          </p>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Button
-            onClick={iniciarViaje}
-            disabled={
-              viajeVenta.estado !== "programado" ||
-              new Date() < new Date(viajeVenta.fecha_salida)
-            }
-          >
-            <PlayCircle className="h-4 w-4 mr-2" />
-            Empezar viaje
-          </Button>
-
-          <Button
-            variant="destructive"
-            onClick={terminarViaje}
-            disabled={viajeVenta.estado !== "en_curso"}
-          >
-            <StopCircle className="h-4 w-4 mr-2" />
-            Terminar viaje
-          </Button>
-        </div>
-
-        {viajeVenta.estado !== "en_curso" && (
-          <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
-            Para vender boletos, el viaje debe estar en curso.
-          </div>
-        )}
-
-        {viajeVenta.estado === "en_curso" && viajeVenta.tipo_viaje === "directo" && (
-          <div className="rounded-lg border border-orange-300 bg-orange-50 p-3 text-sm text-orange-800">
-            Este viaje es directo. No se permite venta presencial durante el recorrido.
-          </div>
-        )}
-      </div>
-    )}
-  </Card>
-
-  {viajeVenta &&
-    viajeVenta.estado === "en_curso" &&
-    viajeVenta.tipo_viaje === "indirecto" && (
-      <>
-        <Card className="p-6 space-y-5">
-          <h3 className="text-lg font-semibold">Datos de la venta</h3>
-
-          <div className="grid md:grid-cols-[1fr_auto] gap-3 md:items-end">
-            <div className="space-y-2">
-              <Label>Cédula del comprador</Label>
-              <Input
-                value={cedulaComprador}
-                onChange={(e) => setCedulaComprador(e.target.value)}
-                placeholder="Ingrese la cédula del comprador"
-              />
+                </p>
+              </div>
             </div>
 
-            <Button onClick={buscarCompradorPorCedula} disabled={buscandoComprador}>
-              {buscandoComprador ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <UserSearch className="h-4 w-4 mr-2" />
-              )}
-              Buscar comprador
-            </Button>
-          </div>
-
-          {comprador && (
-            <div className="rounded-lg border bg-muted/30 p-4 text-sm space-y-1">
-              <p>
-                <span className="font-medium">Comprador:</span> {comprador.full_name}
-              </p>
-              <p>
-                <span className="font-medium">Cédula:</span> {comprador.cedula}
-              </p>
-              <p>
-                <span className="font-medium">Teléfono:</span> {comprador.phone}
-              </p>
-              <p>
-                <span className="font-medium">Correo:</span> {comprador.email}
-              </p>
-            </div>
-          )}
-
-          <div className="grid md:grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Ciudad / parada</Label>
+              <Label>Viaje asignado</Label>
               <select
-                value={ciudadParadaId}
-                onChange={(e) => setCiudadParadaId(e.target.value)}
+                value={viajeVentaId}
+                onChange={(e) => {
+                  setViajeVentaId(e.target.value);
+                  setComprador(null);
+                  setCedulaComprador("");
+                  setAsientosSeleccionados([]);
+                  setVentaExitosa(null);
+                  setEfectivoRecibido("");
+                }}
                 className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
               >
-                <option value="">Selecciona una ciudad</option>
-                {ciudadesParadas.map((ciudad) => (
-                  <option key={ciudad.id} value={ciudad.id}>
-                    {ciudad.nombre}
-                    {ciudad.provincia ? ` - ${ciudad.provincia}` : ""}
+                <option value="">Selecciona un viaje</option>
+                {viajes.map((viaje) => (
+                  <option key={viaje.id} value={viaje.id}>
+                    Viaje #{viaje.id} - {viaje.rutas?.ciudad_origen} →{" "}
+                    {viaje.rutas?.ciudad_destino} - {viaje.estado} - {viaje.tipo_viaje}
                   </option>
                 ))}
               </select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Observación</Label>
-              <Input
-                value={observacionVenta}
-                onChange={(e) => setObservacionVenta(e.target.value)}
-                placeholder="Ejemplo: Saliendo de la ciudad"
-              />
-            </div>
-          </div>
-        </Card>
+            {viajeVenta && (
+              <div className="rounded-lg border p-4 space-y-3">
+                <h3 className="font-semibold">Información del viaje</h3>
 
-        <Card className="p-6 space-y-5">
-          <div className="flex items-center gap-2">
-            <Armchair className="h-5 w-5 text-primary" />
-            <h3 className="text-lg font-semibold">Asientos disponibles</h3>
-          </div>
-
-          {cargandoAsientos ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Cargando asientos...
-            </div>
-          ) : asientosDisponibles.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No existen asientos disponibles para este viaje.
-            </p>
-          ) : (
-            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
-              {asientosDisponibles.map((asiento) => {
-                const seleccionado = asientosSeleccionados.some(
-                  (item) => item.asiento.id === asiento.id
-                );
-
-                return (
-                  <Button
-                    key={asiento.id}
-                    type="button"
-                    variant={seleccionado ? "default" : "outline"}
-                    onClick={() => seleccionarAsientoVenta(asiento)}
-                    className="h-12"
-                  >
-                    {asiento.numero}
-                  </Button>
-                );
-              })}
-            </div>
-          )}
-        </Card>
-
-        {asientosSeleccionados.length > 0 && (
-          <Card className="p-6 space-y-5">
-            <h3 className="text-lg font-semibold">Ocupantes por asiento</h3>
-
-            <div className="space-y-4">
-              {asientosSeleccionados.map((item) => {
-                const descuentosPermitidos = obtenerDescuentosPermitidos(item.ocupante);
-
-                return (
-                  <div key={item.asiento.id} className="rounded-lg border p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-semibold">
-                        Asiento {item.asiento.numero} - {item.asiento.tipo}
-                      </h4>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => seleccionarAsientoVenta(item.asiento)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Quitar
-                      </Button>
-                    </div>
-
-                    <div className="grid md:grid-cols-[1fr_auto] gap-3 md:items-end">
-                      <div className="space-y-2">
-                        <Label>Cédula del ocupante</Label>
-                        <Input
-                          value={item.cedulaOcupante}
-                          onChange={(e) =>
-                            actualizarCedulaOcupante(item.asiento.id, e.target.value)
-                          }
-                          placeholder="Cédula de quien ocupará el asiento"
-                        />
-                      </div>
-
-                      <Button
-                        variant="outline"
-                        onClick={() => buscarOcupanteAsiento(item.asiento.id)}
-                      >
-                        Buscar ocupante
-                      </Button>
-                    </div>
-
-                    {item.ocupante && (
-                      <div className="text-sm rounded-lg bg-muted/30 p-3 space-y-1">
-                        <p>
-                          <span className="font-medium">Ocupante:</span>{" "}
-                          {item.ocupante.full_name}
-                        </p>
-                        <p>
-                          <span className="font-medium">Cédula:</span>{" "}
-                          {item.ocupante.cedula}
-                        </p>
-                        <p>
-                          <span className="font-medium">Edad:</span>{" "}
-                          {calcularEdad(item.ocupante.fecha_nacimiento) ?? "No registrada"}
-                        </p>
-                        <p>
-                          <span className="font-medium">Discapacidad:</span>{" "}
-                          {item.ocupante.tiene_discapacidad ? "Sí" : "No"}
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="grid md:grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label>Descuento</Label>
-                        <select
-                          value={item.tipo_descuento}
-                          onChange={(e) =>
-                            cambiarDescuentoAsiento(
-                              item.asiento.id,
-                              e.target.value as
-                                | "ninguno"
-                                | "menor"
-                                | "tercera_edad"
-                                | "discapacidad"
-                            )
-                          }
-                          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-                        >
-                          <option value="ninguno">Ninguno</option>
-                          <option
-                            value="menor"
-                            disabled={!descuentosPermitidos.includes("menor")}
-                          >
-                            Menor
-                          </option>
-                          <option
-                            value="tercera_edad"
-                            disabled={!descuentosPermitidos.includes("tercera_edad")}
-                          >
-                            Tercera edad
-                          </option>
-                          <option
-                            value="discapacidad"
-                            disabled={!descuentosPermitidos.includes("discapacidad")}
-                          >
-                            Discapacidad
-                          </option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Precio asiento</Label>
-                        <Input value={`$${item.precio_unitario.toFixed(2)}`} readOnly />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-        )}
-
-        <Card className="p-6 space-y-5">
-          <h3 className="text-lg font-semibold">Pago en efectivo</h3>
-
-          <div className="grid md:grid-cols-3 gap-3">
-            <div className="space-y-2">
-              <Label>Total a pagar</Label>
-              <Input value={`$${totalVenta.toFixed(2)}`} readOnly />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Efectivo recibido</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={efectivoRecibido}
-                onChange={(e) => setEfectivoRecibido(e.target.value)}
-                placeholder="0.00"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Cambio</Label>
-              <Input
-                value={efectivoNumero >= totalVenta ? `$${cambioVenta.toFixed(2)}` : "$0.00"}
-                readOnly
-              />
-            </div>
-          </div>
-
-          <Button
-            className="w-full"
-            onClick={registrarVentaPresencial}
-            disabled={registrandoVenta}
-          >
-            {registrandoVenta ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-            )}
-            Validar venta presencial
-          </Button>
-        </Card>
-
-        {ventaExitosa && (
-          <Card className="p-6 space-y-4">
-            <h3 className="text-lg font-semibold">Venta registrada correctamente</h3>
-
-            <p className="text-sm">
-              <span className="font-medium">Reserva:</span> #{ventaExitosa.reservaId}
-            </p>
-
-            <p className="text-sm">
-              <span className="font-medium">Total:</span> ${ventaExitosa.total.toFixed(2)}
-            </p>
-
-            <div className="space-y-2">
-              <h4 className="font-semibold">Boletos generados y registrados como usados</h4>
-
-              {ventaExitosa.boletos.map((boleto) => (
-                <div key={boleto.codigo_qr} className="rounded-lg border p-3 text-sm">
+                <div className="grid md:grid-cols-2 gap-3 text-sm">
                   <p>
-                    <span className="font-medium">Pasajero:</span> {boleto.pasajero}
+                    <span className="font-medium">Ruta:</span>{" "}
+                    {viajeVenta.rutas?.ciudad_origen} → {viajeVenta.rutas?.ciudad_destino}
                   </p>
+
                   <p>
-                    <span className="font-medium">Asiento:</span> {boleto.asiento}
+                    <span className="font-medium">Estado:</span> {viajeVenta.estado}
                   </p>
-                  <p className="break-all">
-                    <span className="font-medium">QR:</span> {boleto.codigo_qr}
+
+                  <p>
+                    <span className="font-medium">Tipo:</span> {viajeVenta.tipo_viaje}
+                  </p>
+
+                  <p>
+                    <span className="font-medium">Salida:</span>{" "}
+                    {new Date(viajeVenta.fecha_salida).toLocaleString()}
+                  </p>
+
+                  <p>
+                    <span className="font-medium">Bus:</span>{" "}
+                    {viajeVenta.buses?.placa ?? "No asignado"}
+                  </p>
+
+                  <p>
+                    <span className="font-medium">Precio base:</span> $
+                    {viajeVenta.precio_base.toFixed(2)}
                   </p>
                 </div>
-              ))}
-            </div>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    onClick={iniciarViaje}
+                    disabled={
+                      viajeVenta.estado !== "programado" ||
+                      new Date() < new Date(viajeVenta.fecha_salida)
+                    }
+                  >
+                    <PlayCircle className="h-4 w-4 mr-2" />
+                    Empezar viaje
+                  </Button>
+
+                  <Button
+                    variant="destructive"
+                    onClick={terminarViaje}
+                    disabled={viajeVenta.estado !== "en_curso"}
+                  >
+                    <StopCircle className="h-4 w-4 mr-2" />
+                    Terminar viaje
+                  </Button>
+                </div>
+
+                {viajeVenta.estado !== "en_curso" && (
+                  <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
+                    Para vender boletos, el viaje debe estar en curso.
+                  </div>
+                )}
+
+                {viajeVenta.estado === "en_curso" && viajeVenta.tipo_viaje === "directo" && (
+                  <div className="rounded-lg border border-orange-300 bg-orange-50 p-3 text-sm text-orange-800">
+                    Este viaje es directo. No se permite venta presencial durante el recorrido.
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
-        )}
-      </>
-    )}
-</TabsContent>
+
+          {viajeVenta &&
+            viajeVenta.estado === "en_curso" &&
+            viajeVenta.tipo_viaje === "indirecto" && (
+              <>
+                <Card className="p-6 space-y-5">
+                  <h3 className="text-lg font-semibold">Datos de la venta</h3>
+
+                  <div className="grid md:grid-cols-[1fr_auto] gap-3 md:items-end">
+                    <div className="space-y-2">
+                      <Label>Cédula del comprador</Label>
+                      <Input
+                        value={cedulaComprador}
+                        onChange={(e) => setCedulaComprador(e.target.value)}
+                        placeholder="Ingrese la cédula del comprador"
+                      />
+                    </div>
+
+                    <Button onClick={buscarCompradorPorCedula} disabled={buscandoComprador}>
+                      {buscandoComprador ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <UserSearch className="h-4 w-4 mr-2" />
+                      )}
+                      Buscar comprador
+                    </Button>
+                  </div>
+
+                  {comprador && (
+                    <div className="rounded-lg border bg-muted/30 p-4 text-sm space-y-1">
+                      <p>
+                        <span className="font-medium">Comprador:</span> {comprador.full_name}
+                      </p>
+                      <p>
+                        <span className="font-medium">Cédula:</span> {comprador.cedula}
+                      </p>
+                      <p>
+                        <span className="font-medium">Teléfono:</span> {comprador.phone}
+                      </p>
+                      <p>
+                        <span className="font-medium">Correo:</span> {comprador.email}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="grid md:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>Ciudad / parada</Label>
+                      <select
+                        value={ciudadParadaId}
+                        onChange={(e) => setCiudadParadaId(e.target.value)}
+                        className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      >
+                        <option value="">Selecciona una ciudad</option>
+                        {ciudadesParadas.map((ciudad) => (
+                          <option key={ciudad.id} value={ciudad.id}>
+                            {ciudad.nombre}
+                            {ciudad.provincia ? ` - ${ciudad.provincia}` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Observación</Label>
+                      <Input
+                        value={observacionVenta}
+                        onChange={(e) => setObservacionVenta(e.target.value)}
+                        placeholder="Ejemplo: Saliendo de la ciudad"
+                      />
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="p-6 space-y-5">
+                  <div className="flex items-center gap-2">
+                    <Armchair className="h-5 w-5 text-primary" />
+                    <h3 className="text-lg font-semibold">Asientos disponibles</h3>
+                  </div>
+
+                  {cargandoAsientos ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Cargando asientos...
+                    </div>
+                  ) : asientosDisponibles.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No existen asientos disponibles para este viaje.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
+                      {asientosDisponibles.map((asiento) => {
+                        const seleccionado = asientosSeleccionados.some(
+                          (item) => item.asiento.id === asiento.id
+                        );
+
+                        return (
+                          <Button
+                            key={asiento.id}
+                            type="button"
+                            variant={seleccionado ? "default" : "outline"}
+                            onClick={() => seleccionarAsientoVenta(asiento)}
+                            className="h-12"
+                          >
+                            {asiento.numero}
+                         </Button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </Card>
+
+                {asientosSeleccionados.length > 0 && (
+                  <Card className="p-6 space-y-5">
+                    <h3 className="text-lg font-semibold">Ocupantes por asiento</h3>
+
+                    <div className="space-y-4">
+                      {asientosSeleccionados.map((item) => {
+                        const descuentosPermitidos = obtenerDescuentosPermitidos(item.ocupante);
+
+                        return (
+                          <div key={item.asiento.id} className="rounded-lg border p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-semibold">
+                                Asiento {item.asiento.numero} - {item.asiento.tipo}
+                              </h4>
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => seleccionarAsientoVenta(item.asiento)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Quitar
+                              </Button>
+                            </div>
+
+                            <div className="grid md:grid-cols-[1fr_auto] gap-3 md:items-end">
+                              <div className="space-y-2">
+                                <Label>Cédula del ocupante</Label>
+                                <Input
+                                  value={item.cedulaOcupante}
+                                  onChange={(e) =>
+                                    actualizarCedulaOcupante(item.asiento.id, e.target.value)
+                                  }
+                                  placeholder="Cédula de quien ocupará el asiento"
+                                />
+                              </div>
+
+                              <Button
+                                variant="outline"
+                                onClick={() => buscarOcupanteAsiento(item.asiento.id)}
+                              >
+                                Buscar ocupante
+                              </Button>
+                            </div>
+
+                            {item.ocupante && (
+                              <div className="text-sm rounded-lg bg-muted/30 p-3 space-y-1">
+                                <p>
+                                  <span className="font-medium">Ocupante:</span>{" "}
+                                  {item.ocupante.full_name}
+                                </p>
+                                <p>
+                                  <span className="font-medium">Cédula:</span>{" "}
+                                  {item.ocupante.cedula}
+                                </p>
+                                <p>
+                                  <span className="font-medium">Edad:</span>{" "}
+                                  {calcularEdad(item.ocupante.fecha_nacimiento) ?? "No registrada"}
+                                </p>
+                                <p>
+                                  <span className="font-medium">Discapacidad:</span>{" "}
+                                  {item.ocupante.tiene_discapacidad ? "Sí" : "No"}
+                                </p>
+                              </div>
+                            )}
+
+                            <div className="grid md:grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <Label>Descuento</Label>
+                                <select
+                                  value={item.tipo_descuento}
+                                  onChange={(e) =>
+                                    cambiarDescuentoAsiento(
+                                      item.asiento.id,
+                                      e.target.value as
+                                        | "ninguno"
+                                        | "menor"
+                                        | "tercera_edad"
+                                        | "discapacidad"
+                                    )
+                                  }
+                                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                                >
+                                  <option value="ninguno">Ninguno</option>
+                                  <option
+                                    value="menor"
+                                    disabled={!descuentosPermitidos.includes("menor")}
+                                  >
+                                    Menor
+                                  </option>
+                                  <option
+                                    value="tercera_edad"
+                                    disabled={!descuentosPermitidos.includes("tercera_edad")}
+                                  >
+                                    Tercera edad
+                                  </option>
+                                  <option
+                                    value="discapacidad"
+                                    disabled={!descuentosPermitidos.includes("discapacidad")}
+                                  >
+                                    Discapacidad
+                                  </option>
+                                </select>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Precio asiento</Label>
+                                <Input value={`$${item.precio_unitario.toFixed(2)}`} readOnly />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Card>
+                )}
+
+                <Card className="p-6 space-y-5">
+                  <h3 className="text-lg font-semibold">Pago en efectivo</h3>
+
+                  <div className="grid md:grid-cols-3 gap-3">
+                    <div className="space-y-2">
+                      <Label>Total a pagar</Label>
+                      <Input value={`$${totalVenta.toFixed(2)}`} readOnly />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Efectivo recibido</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={efectivoRecibido}
+                        onChange={(e) => setEfectivoRecibido(e.target.value)}
+                        placeholder="0.00"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Cambio</Label>
+                      <Input
+                        value={efectivoNumero >= totalVenta ? `$${cambioVenta.toFixed(2)}` : "$0.00"}
+                        readOnly
+                      />
+                    </div>
+                  </div>
+
+                 <Button
+                    className="w-full"
+                    onClick={registrarVentaPresencial}
+                    disabled={registrandoVenta}
+                  >
+                    {registrandoVenta ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                    )}
+                    Validar venta presencial
+                  </Button>
+                </Card>
+
+                {ventaExitosa && (
+                  <Card className="p-6 space-y-4">
+                    <h3 className="text-lg font-semibold">Venta registrada correctamente</h3>
+
+                    <p className="text-sm">
+                      <span className="font-medium">Reserva:</span> #{ventaExitosa.reservaId}
+                    </p>
+
+                    <p className="text-sm">
+                      <span className="font-medium">Total:</span> ${ventaExitosa.total.toFixed(2)}
+                    </p>
+
+                    <div className="space-y-2">
+                      <h4 className="font-semibold">Boletos generados y registrados como usados</h4>
+
+                      {ventaExitosa.boletos.map((boleto) => (
+                        <div key={boleto.codigo_qr} className="rounded-lg border p-3 text-sm">
+                          <p>
+                            <span className="font-medium">Pasajero:</span> {boleto.pasajero}
+                          </p>
+                          <p>
+                            <span className="font-medium">Asiento:</span> {boleto.asiento}
+                          </p>
+                          <p className="break-all">
+                            <span className="font-medium">QR:</span> {boleto.codigo_qr}
+                          </p>
+                       </div>
+                      ))}
+                    </div>
+                  </Card>
+                )}
+              </>
+            )}
+        </TabsContent>
       </Tabs>
     </div>
   );
