@@ -12,13 +12,15 @@ export default function Index() {
     const [destino, setDestino] = useState("");
     const [fecha, setFecha] = useState("");
 
-    const handleSearch = () => {
-    if (!origen || !destino || !fecha) {
-        alert("Completa todos los campos para buscar");
-    return;
-    }
-    navigate(`/buscar?origen=${origen}&destino=${destino}&fecha=${fecha}`);
-};
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!origen || !destino || !fecha) {
+            alert("Completa todos los campos para buscar");
+            return;
+        }
+        const params = new URLSearchParams({ origen, destino, fecha });
+        navigate(`/buscar?${params.toString()}`);
+    };
     return (
         <>
             {/* SECCIÓN HERO (Persona 4) */}
@@ -44,7 +46,7 @@ export default function Index() {
             {/* BUSCADOR DE VIAJES (Persona 4) */}
             <section className="container -mt-12 relative z-10 mb-16">
                 <Card className="p-6 md:p-8 shadow-lg">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         {/* Input Origen */}
                         <div className="space-y-2">
                             <Label htmlFor="origen" className="text-sm font-medium">
@@ -100,16 +102,17 @@ export default function Index() {
                         {/* Botón Buscar */}
                         <div className="flex items-end">
                             <Button
-                                onClick={handleSearch}
+                                type="submit" 
                                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                                 size="lg"
                             >
                                 Buscar viajes
                             </Button>
                         </div>
-                    </div>
+                    </form>
                 </Card>
             </section>
+
 
             {/* SECCIÓN DE BENEFICIOS (Persona 5) */}
             <section className="container py-16 md:py-20">
