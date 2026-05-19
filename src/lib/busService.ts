@@ -16,7 +16,9 @@ export interface Bus {
   created_at: string;
 }
 
-export type BusInsert = Omit<Bus, "id" | "created_at">;
+export type BusInsert = Omit<Bus, "id" | "created_at" | "numero"> & {
+  numero?: string | null;
+};
 export type BusUpdate = Partial<BusInsert>;
 
 export const COOPERATIVA_ID = 3;
@@ -32,7 +34,7 @@ export const busService = {
     return data as Bus[];
   },
 
-  async create(bus: Omit<BusInsert, "cooperativa_id">): Promise<Bus> {
+  async create(bus: Omit<BusInsert, "cooperativa_id" | "numero">): Promise<Bus> {
     const { data, error } = await supabase
       .from("buses")
       .insert({ ...bus, cooperativa_id: COOPERATIVA_ID })
