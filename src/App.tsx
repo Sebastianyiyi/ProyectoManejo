@@ -5,10 +5,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
-
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Buscar from "./pages/Buscar";
+import ChoferDashboard from "./pages/ChoferDashboard";
 import { Layout } from "./components/ui/Layout";
 
 const PaginaCompra = lazy(() => import("./pages/PaginaCompra"));
@@ -28,6 +28,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/buscar" element={<Buscar />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/chofer" element={<ChoferDashboard />} />
               <Route path="/compra/:viajeId" element={
                 <Suspense fallback={<div>Cargando...</div>}>
                   <PaginaCompra />

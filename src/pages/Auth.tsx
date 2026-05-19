@@ -38,6 +38,21 @@ export default function Auth() {
 
   useEffect(() => {
     if (user && !authLoading) {
+      if (user.role === "chofer") {
+        navigate("/chofer", { replace: true });
+        return;
+      }
+
+      if (user.role === "administrador") {
+        navigate("/", { replace: true });
+        return;
+      }
+
+      if (user.role === "oficinista") {
+        navigate("/", { replace: true });
+        return;
+      }
+
       const from = (location.state as any)?.from || "/";
       navigate(from, { replace: true });
     }
