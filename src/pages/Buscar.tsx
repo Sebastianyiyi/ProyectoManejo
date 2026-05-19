@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Bus, Clock, MapPin } from "lucide-react";
+import { Loader2, Bus, Clock, MapPin, Star, ArrowUpDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,13 @@ interface Viaje {
     } | null;
   } | null;
 }
+
+// Etiqueta y estilo visual por tipo de bus
+const tipoBusConfig: Record<string, { label: string; className: string }> = {
+  normal:     { label: "Normal",      className: "bg-slate-100 text-slate-700 border border-slate-300" },
+  vip:        { label: "VIP",         className: "bg-amber-100 text-amber-700 border border-amber-400" },
+  doble_piso: { label: "Doble Piso",  className: "bg-indigo-100 text-indigo-700 border border-indigo-400" },
+};
 
 export default function Buscar() {
   const [params, setParams] = useSearchParams();
@@ -225,10 +232,12 @@ export default function Buscar() {
             <Card key={v.id} className="p-4 md:p-5 hover:shadow-md transition-shadow">
               <div className="flex flex-col md:flex-row md:items-center gap-4">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <Badge variant="secondary">{v.buses?.cooperativas?.nombre}</Badge>
-                    {v.buses?.tipo === "vip" && (
-                      <Badge className="bg-accent text-accent-foreground">VIP</Badge>
+                    {v.buses?.tipo && tipoBusConfig[v.buses.tipo] && (
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${tipoBusConfig[v.buses.tipo].className}`}>
+                        {tipoBusConfig[v.buses.tipo].label}
+                      </span>
                     )}
                     <span className="text-xs text-muted-foreground">{v.buses?.placa}</span>
                   </div>
@@ -242,7 +251,12 @@ export default function Buscar() {
                       </div>
                     </div>
                     <div className="flex-1 border-t border-dashed border-border relative">
-                      <Bus className="h-4 w-4 absolute -top-2 left-1/2 -translate-x-1/2 text-muted-foreground bg-card" />
+                      {v.buses?.tipo === "doble_piso"
+                        ? <ArrowUpDown className="h-4 w-4 absolute -top-2 left-1/2 -translate-x-1/2 text-indigo-500 bg-card" />
+                        : v.buses?.tipo === "vip"
+                        ? <Star className="h-4 w-4 absolute -top-2 left-1/2 -translate-x-1/2 text-amber-500 bg-card" />
+                        : <Bus className="h-4 w-4 absolute -top-2 left-1/2 -translate-x-1/2 text-muted-foreground bg-card" />
+                      }
                     </div>
                     <div className="text-right">
                       <div className="font-semibold text-lg">
