@@ -63,7 +63,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (session?.user) {
-          setLoading(true); // vuelve a loading mientras busca el rol
           fetchUserWithRole(session.user)
             .then((u) => {
               setUser(u);

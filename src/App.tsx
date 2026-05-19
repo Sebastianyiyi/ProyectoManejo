@@ -13,7 +13,15 @@ import BusesPage from "./pages/dashboard/BusesPage";
 
 const NotFound = () => <div className="p-8 text-2xl font-bold">404 — Página no encontrada</div>;
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
