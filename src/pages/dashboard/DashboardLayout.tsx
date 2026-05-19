@@ -27,7 +27,7 @@ export default function DashboardLayout() {
       <aside className="w-56 border-r flex flex-col bg-muted/20">
         <div className="p-4 border-b">
           <p className="font-bold text-sm">Panel de gestión</p>
-          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+          <p className="text-xs text-muted-foreground truncate">{user.name}</p>
           <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full capitalize">
             {user.role}
           </span>

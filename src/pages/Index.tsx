@@ -1,5 +1,6 @@
-import { Link } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Bus, MapPin, ShieldCheck, QrCode, CreditCard, Users, MapIcon, CalendarIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,9 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function Index() {
+    const { user, loading } = useAuth();
     const [origen, setOrigen] = useState("");
     const [destino, setDestino] = useState("");
     const [fecha, setFecha] = useState("");
+
+    if (!loading && user && (user.role === "administrador" || user.role === "oficinista")) {
+        return <Navigate to="/dashboard" replace />;
+    }
 
     const handleSearch = () => {
         console.log({ origen, destino, fecha });

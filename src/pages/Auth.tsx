@@ -37,7 +37,12 @@ export default function Auth() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (user && !authLoading) {
+    if (!authLoading && user) {
+      if (user.role === "administrador" || user.role === "oficinista") {
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
       const from = (location.state as any)?.from || "/";
       navigate(from, { replace: true });
     }
