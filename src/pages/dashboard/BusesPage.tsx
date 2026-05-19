@@ -17,11 +17,10 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Pencil, Trash2, Power } from "lucide-react";
+import { PlusCircle, Pencil, Trash2, Power, Image as ImageIcon } from "lucide-react";
 
-const EMPTY_FORM: Omit<BusInsert, "cooperativa_id"> = {
+const EMPTY_FORM: Omit<BusInsert, "cooperativa_id" | "numero"> = {
   placa: "",
-  numero: "",
   capacidad: 40,
   tipo: "economico",
   marca_chasis: "",
@@ -41,6 +40,9 @@ export default function BusesPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
 
   const fetchBuses = useCallback(async () => {
     try {
@@ -70,7 +72,6 @@ export default function BusesPage() {
     setEditingBus(bus);
     setForm({
       placa: bus.placa,
-      numero: bus.numero ?? "",
       capacidad: bus.capacidad,
       tipo: bus.tipo,
       marca_chasis: bus.marca_chasis ?? "",
@@ -82,8 +83,8 @@ export default function BusesPage() {
   };
 
   const handleSave = async () => {
-    if (!form.placa.trim() || !form.numero?.trim()) {
-      toast({ title: "Placa y número son obligatorios", variant: "destructive" });
+    if (!form.placa.trim()) {
+      toast({ title: "La placa es obligatoria", variant: "destructive" });
       return;
     }
     try {
@@ -106,12 +107,22 @@ export default function BusesPage() {
   };
 
   const handleToggle = async (bus: Bus) => {
+    const nuevoEstado = !bus.activo;
     try {
-      await busService.toggleActivo(bus.id, !bus.activo);
-      toast({ title: `Bus ${bus.activo ? "desactivado" : "activado"} ✓` });
-      fetchBuses();
+      setTogglingId(bus.id);
+      await busService.toggleActivo(bus.id, nuevoEstado);
+
+      setBuses((prev) =>
+        prev.map((b) =>
+          b.id === bus.id ? { ...b, activo: nuevoEstado } : b
+        )
+      );
+
+      toast({ title: `Bus ${nuevoEstado ? "activado" : "desactivado"} ✓` });
     } catch {
       toast({ title: "Error al cambiar estado", variant: "destructive" });
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -165,8 +176,14 @@ export default function BusesPage() {
             <table className="w-full text-sm">
               <thead className="border-b bg-muted/40">
                 <tr>
-                  {["N°", "Placa", "Tipo", "Capacidad", "Chasis", "Carrocería", "Estado", "Acciones"].map((h) => (
-                    <th key={h} className="text-left px-4 py-3 font-medium text-muted-foreground whitespace-nowrap">{h}</th>
+                  {["N°", "Placa", "Tipo", "Capacidad", "Chasis", "Carrocería", "Estado", "Foto", "Acciones"].map((h) => (
+                    <th
+                      key={h}
+                      className={`px-4 py-3 font-medium text-muted-foreground whitespace-nowrap ${h === "Foto" || h === "Acciones" ? "text-center" : "text-left"
+                        }`}
+                    >
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -184,13 +201,39 @@ export default function BusesPage() {
                         {bus.activo ? "Activo" : "Inactivo"}
                       </Badge>
                     </td>
+                    <td className="px-4 py-3 text-center">
+                      {bus.foto_url ? (
+                        <div className="flex justify-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-2"
+                            onClick={() => setPreviewImage(bus.foto_url!)}
+                          >
+                            <ImageIcon size={14} />
+                            Ver bus
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs inline-block">Sin imagen</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center justify-center gap-1">
                         <Button size="icon" variant="ghost" title="Editar" onClick={() => openEdit(bus)}>
                           <Pencil size={15} />
                         </Button>
-                        <Button size="icon" variant="ghost" title={bus.activo ? "Desactivar" : "Activar"} onClick={() => handleToggle(bus)}>
-                          <Power size={15} className={bus.activo ? "text-green-600" : "text-muted-foreground"} />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          disabled={togglingId === bus.id}
+                          title={bus.activo ? "Desactivar" : "Activar"}
+                          onClick={() => handleToggle(bus)}
+                        >
+                          <Power
+                            size={15}
+                            className={bus.activo ? "text-green-600" : "text-muted-foreground"}
+                          />
                         </Button>
                         <Button size="icon" variant="ghost" title="Eliminar"
                           className="text-destructive hover:text-destructive"
@@ -214,12 +257,6 @@ export default function BusesPage() {
             <DialogTitle>{editingBus ? "Editar bus" : "Registrar nuevo bus"}</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-2">
-            <div className="space-y-1">
-              <Label>Número de bus *</Label>
-              <Input placeholder="Ej: 001"
-                value={form.numero ?? ""}
-                onChange={(e) => setForm({ ...form, numero: e.target.value })} />
-            </div>
             <div className="space-y-1">
               <Label>Placa *</Label>
               <Input placeholder="Ej: ABC-1234"
@@ -268,6 +305,36 @@ export default function BusesPage() {
               {saving ? "Guardando..." : editingBus ? "Guardar cambios" : "Registrar bus"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!previewImage} onOpenChange={(open) => { if (!open) { setPreviewImage(null); setPreviewError(null); } }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Vista previa del bus</DialogTitle>
+          </DialogHeader>
+
+          {previewImage && (
+            <div className="overflow-hidden rounded-md border bg-muted/20 p-4">
+              <img
+                src={previewImage}
+                alt="Foto del bus"
+                className="w-full max-h-[70vh] object-contain"
+                onLoad={() => setPreviewError(null)}
+                onError={() => setPreviewError("error")}
+              />
+
+              {previewError ? (
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-destructive">No se pudo cargar la imagen.</p>
+                  <p className="text-xs text-muted-foreground break-all mt-2">{previewImage}</p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Esto suele pasar porque la URL no apunta a un archivo de imagen directo o el sitio externo bloquea la visualización.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
