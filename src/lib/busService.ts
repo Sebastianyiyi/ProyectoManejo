@@ -19,7 +19,7 @@ export interface Bus {
 export type BusInsert = Omit<Bus, "id" | "created_at">;
 export type BusUpdate = Partial<BusInsert>;
 
-export const COOPERATIVA_ID = 1;
+export const COOPERATIVA_ID = 3;
 
 export const busService = {
   async getAll(): Promise<Bus[]> {
