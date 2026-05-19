@@ -6,6 +6,13 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
+import {
+  CheckCircle2,
+  Bus,
+  Check,
+  Printer,
+  Home,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getAsientosConDisponibilidad,
@@ -276,8 +283,9 @@ const labelDescuento: Record<TipoDescuento, string> = {
         <div className="bg-card border rounded-xl p-6 shadow-sm">
           {/* Frente del bus */}
           <div className="flex justify-center mb-4">
-            <div className="bg-muted rounded-lg px-8 py-2 text-sm text-muted-foreground font-medium">
-              🚌 Frente del bus
+            <div className="bg-muted rounded-lg px-8 py-2 text-sm text-muted-foreground font-medium flex items-center gap-2">
+              <Bus className="h-4 w-4" />
+              Frente del bus
             </div>
           </div>
 
@@ -457,8 +465,9 @@ const labelDescuento: Record<TipoDescuento, string> = {
                 hover:file:bg-accent cursor-pointer"
             />
             {comprobante && (
-              <p className="text-xs text-green-600 mt-1">
-                ✓ {comprobante.name} ({(comprobante.size / 1024).toFixed(0)} KB)
+              <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                <Check className="h-3 w-3" />
+                {comprobante.name} ({(comprobante.size / 1024).toFixed(0)} KB)
               </p>
             )}
           </div>
@@ -480,8 +489,10 @@ const labelDescuento: Record<TipoDescuento, string> = {
   return (
     <div className="max-w-md mx-auto p-6 space-y-6">
       <div className="text-center space-y-2">
-        <div className="text-5xl">✅</div>
-        <h1 className="text-2xl font-bold text-foreground">¡Reserva confirmada!</h1>
+        <div className="flex justify-center">
+          <CheckCircle2 className="h-14 w-14 text-green-500" />
+        </div>
+        <h1 className="text-2xl font-bold text-foreground">Reserva confirmada</h1>
         <p className="text-muted-foreground text-sm">
           Tu comprobante fue recibido. El oficinista verificará el pago pronto.
         </p>
@@ -529,15 +540,17 @@ const labelDescuento: Record<TipoDescuento, string> = {
         <button
           onClick={() => window.print()}
           className="flex-1 border border-border rounded-xl py-3 text-sm font-medium
-            hover:bg-accent transition-colors"
+            hover:bg-accent transition-colors flex items-center justify-center gap-2"
         >
+          <Printer className="h-4 w-4" />
           Imprimir boleto
         </button>
         <button
           onClick={() => navigate("/")}
           className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl
-            py-3 text-sm font-medium transition-colors"
+            py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2"
         >
+          <Home className="h-4 w-4" />
           Ir al inicio
         </button>
       </div>
