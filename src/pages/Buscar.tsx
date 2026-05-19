@@ -191,13 +191,14 @@ export default function Buscar() {
           </div>
 
           <div className="space-y-1.5">
-            <Label>Tipo</Label>
+            <Label>Tipo de bus</Label>
             <Select value={tipo} onValueChange={setTipo}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos" className="focus:bg-primary focus:text-primary-foreground">Todos</SelectItem>
                 <SelectItem value="normal" className="focus:bg-primary focus:text-primary-foreground">Normal</SelectItem>
                 <SelectItem value="vip" className="focus:bg-primary focus:text-primary-foreground">VIP</SelectItem>
+                <SelectItem value="doble_piso" className="focus:bg-primary focus:text-primary-foreground">Doble Piso</SelectItem>
               </SelectContent>
             </Select>
           </div>
