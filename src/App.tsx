@@ -12,6 +12,8 @@ import ChoferDashboard from "./pages/ChoferDashboard";
 import { Layout } from "./components/ui/Layout";
 import DashboardLayout from "./pages/dashboard/DashboardLayout";
 import BusesPage from "./pages/dashboard/BusesPage";
+import MisReservas from "./pages/MisReservas";
+import Boleto from "./pages/Boleto";
 
 const PaginaCompra = lazy(() => import("./pages/PaginaCompra"));
 const NotFound = () => <div className="p-8 text-2xl font-bold">404 — Página no encontrada</div>;
@@ -39,6 +41,8 @@ const App = () => (
               <Route path="/buscar" element={<Buscar />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/chofer" element={<ChoferDashboard />} />
+              <Route path="/mis-reservas" element={<MisReservas />} />
+              <Route path="/boleto/:codigo" element={<Boleto />} />
               <Route path="/compra/:viajeId" element={
                 <Suspense fallback={<div>Cargando...</div>}>
                   <PaginaCompra />
