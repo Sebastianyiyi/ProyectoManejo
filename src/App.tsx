@@ -1,4 +1,10 @@
 import { lazy, Suspense } from "react";
+import { useLang } from "@/contexts/LanguageContext";
+
+function DashboardHome() {
+  const { t } = useLang();
+  return <div className="p-6"><h1 className="text-2xl font-bold">{t("dash_welcome")}</h1></div>;
+}
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -58,11 +64,7 @@ const App = () => (
                   <Route path="*" element={<NotFound />} />
                 </Route>
                 <Route path="/dashboard" element={<DashboardLayout />}>
-                  <Route index element={
-                    <div className="p-6">
-                      <h1 className="text-2xl font-bold">Bienvenido al panel</h1>
-                    </div>
-                  } />
+                  <Route index element={<DashboardHome />} />
                   <Route path="cooperativa" element={<CooperativaPerfilPage />} />
                   <Route path="buses" element={<BusesPage />} />
                 </Route>

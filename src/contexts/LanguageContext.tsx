@@ -113,6 +113,15 @@ const T = {
     compra_qr_hint: "Muestra este QR al subir al bus",
     compra_print: "Imprimir boleto",
     compra_go_home: "Ir al inicio",
+    // Dashboard
+    dash_panel: "Panel de gestión",
+    dash_welcome: "Bienvenido al panel",
+    dash_home: "Inicio",
+    dash_cooperative: "Cooperativa",
+    dash_buses: "Buses",
+    dash_routes: "Rutas",
+    dash_users: "Usuarios",
+    dash_tickets: "Boletos",
     // Footer
     footer_rights: "Sistema de venta de boletos.",
     footer_made_for: "Hecho para cooperativas de transporte del Ecuador.",
@@ -226,6 +235,15 @@ const T = {
     compra_qr_hint: "Show this QR when boarding the bus",
     compra_print: "Print ticket",
     compra_go_home: "Go to home",
+    // Dashboard
+    dash_panel: "Management panel",
+    dash_welcome: "Welcome to the panel",
+    dash_home: "Home",
+    dash_cooperative: "Cooperative",
+    dash_buses: "Buses",
+    dash_routes: "Routes",
+    dash_users: "Users",
+    dash_tickets: "Tickets",
     // Footer
     footer_rights: "Bus ticket sales system.",
     footer_made_for: "Built for Ecuador's transport cooperatives.",
