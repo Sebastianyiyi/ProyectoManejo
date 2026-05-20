@@ -317,58 +317,86 @@ const labelDescuento: Record<TipoDescuento, string> = {
             </div>
           </div>
 
+          {/* Etiqueta Piso 1 para doble piso */}
+          {viaje?.buses?.tipo === "doble_piso" && (
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-1 border-t border-border" />
+              <span className="text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-300 px-3 py-1 rounded-full">
+                Piso 1
+              </span>
+              <div className="flex-1 border-t border-border" />
+            </div>
+          )}
+
           {/* Grilla de asientos */}
           <div className="overflow-x-auto">
             <div className="inline-block min-w-full">
-              {Array.from({ length: maxFila }, (_, i) => i + 1).map((fila) => (
-                <div key={fila} className="flex gap-2 justify-center mb-2">
-                  {/* Pasillo: columnas 1-2 | espacio | columnas 3-4 */}
-                  {Array.from({ length: maxColumna }, (_, j) => j + 1).map((col) => {
-                    // Espacio del pasillo entre columna 2 y 3
-                    const pasillo = maxColumna >= 4 && col === 3 ? "ml-6" : "";
-                    const asiento = asientoPorPos(fila, col);
+              {Array.from({ length: maxFila }, (_, i) => i + 1).map((fila) => {
+                // Detectar inicio del segundo piso en bus doble piso:
+                // el separador aparece cuando la fila actual es la primera con tipo "vip"
+                // y la anterior era "normal" (en un bus doble_piso)
+                const primeraFilaVip =
+                  viaje?.buses?.tipo === "doble_piso" &&
+                  asientos.some((a) => a.fila === fila && a.tipo === "vip") &&
+                  !asientos.some((a) => a.fila === fila - 1 && a.tipo === "vip");
 
-                    if (!asiento) {
-                      return (
-                        <div
-                          key={`${fila}-${col}`}
-                          className={`w-10 h-10 ${pasillo}`}
-                        />
-                      );
-                    }
+                return (
+                  <div key={fila}>
+                    {/* Separador Piso 2 */}
+                    {primeraFilaVip && (
+                      <div className="flex items-center gap-3 my-4">
+                        <div className="flex-1 border-t border-border" />
+                        <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-300 px-3 py-1 rounded-full">
+                          Piso 2 — Premium
+                        </span>
+                        <div className="flex-1 border-t border-border" />
+                      </div>
+                    )}
 
-                    const ocupado = asiento.ocupado;
-                    const seleccionado = seleccionados.includes(asiento.id);
-                    const esVip = asiento.tipo === "vip";
+                    <div className="flex gap-2 justify-center mb-2">
+                      {/* Pasillo: columnas 1-2 | espacio | columnas 3-4 */}
+                      {Array.from({ length: maxColumna }, (_, j) => j + 1).map((col) => {
+                        const pasillo = maxColumna >= 4 && col === 3 ? "ml-6" : "";
+                        const asiento = asientoPorPos(fila, col);
 
-                    return (
-                      <button
-                        key={asiento.id}
-                        disabled={ocupado}
-                        onClick={() => !ocupado && toggleAsiento(asiento.id)}
-                        title={`Asiento ${asiento.numero}${esVip ? " (VIP)" : ""}`}
-                        className={`
-                          ${pasillo}
-                          w-10 h-10 rounded-lg text-xs font-semibold
-                          transition-all duration-150
-                          flex items-center justify-center
-                          border-2
-                          ${ocupado
-                            ? "bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed"
-                            : seleccionado
-                              ? "bg-blue-500 border-blue-600 text-white scale-105 shadow-md"
-                              : esVip
-                                ? "bg-yellow-50 border-yellow-400 text-yellow-700 hover:bg-yellow-100"
-                                : "bg-muted border-border text-foreground hover:bg-accent hover:scale-105"
-                          }
-                        `}
-                      >
-                        {asiento.numero}
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
+                        if (!asiento) {
+                          return <div key={`${fila}-${col}`} className={`w-10 h-10 ${pasillo}`} />;
+                        }
+
+                        const ocupado    = asiento.ocupado;
+                        const seleccionado = seleccionados.includes(asiento.id);
+                        const esVip      = asiento.tipo === "vip";
+
+                        return (
+                          <button
+                            key={asiento.id}
+                            disabled={ocupado}
+                            onClick={() => !ocupado && toggleAsiento(asiento.id)}
+                            title={`Asiento ${asiento.numero}${esVip ? " (VIP)" : ""}`}
+                            className={`
+                              ${pasillo}
+                              w-10 h-10 rounded-lg text-xs font-semibold
+                              transition-all duration-150
+                              flex items-center justify-center
+                              border-2
+                              ${ocupado
+                                ? "bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed"
+                                : seleccionado
+                                  ? "bg-blue-500 border-blue-600 text-white scale-105 shadow-md"
+                                  : esVip
+                                    ? "bg-yellow-50 border-yellow-400 text-yellow-700 hover:bg-yellow-100"
+                                    : "bg-muted border-border text-foreground hover:bg-accent hover:scale-105"
+                              }
+                            `}
+                          >
+                            {asiento.numero}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
