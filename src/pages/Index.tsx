@@ -85,38 +85,42 @@ export default function Index() {
                         <div className="space-y-2">
                             <Label htmlFor="origen" className="text-sm font-medium">{t("search_origin")}</Label>
                             <div className="relative">
-                                <Select value={origen} onValueChange={setOrigen} disabled={loadingRutas || origenesUnicos.length === 0}>
-                                    <SelectTrigger className="pl-10">
-                                        <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                                            <MapIcon className="h-5 w-5 text-muted-foreground pointer-events-none" />
-                                        </div>
-                                        <SelectValue placeholder={loadingRutas ? "Cargando..." : (origenesUnicos.length === 0 ? "No disponible" : t("search_origin_placeholder"))} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {origenesUnicos.map((org) => (
-                                            <SelectItem key={org} value={org}>{org}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <MapIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+                                <Input
+                                    id="origen"
+                                    list="origenes-list"
+                                    placeholder={loadingRutas ? "Cargando..." : (origenesUnicos.length === 0 ? "No disponible" : t("search_origin_placeholder"))}
+                                    value={origen}
+                                    onChange={(e) => setOrigen(e.target.value)}
+                                    className="pl-10"
+                                    disabled={loadingRutas || origenesUnicos.length === 0}
+                                />
+                                <datalist id="origenes-list">
+                                    {origenesUnicos.map((org) => (
+                                        <option key={org} value={org} />
+                                    ))}
+                                </datalist>
                             </div>
                         </div>
 
                         <div className="space-y-2">
                             <Label htmlFor="destino" className="text-sm font-medium">{t("search_destination")}</Label>
                             <div className="relative">
-                                <Select value={destino} onValueChange={setDestino} disabled={loadingRutas || destinosUnicos.length === 0}>
-                                    <SelectTrigger className="pl-10">
-                                        <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                                            <MapIcon className="h-5 w-5 text-muted-foreground pointer-events-none" />
-                                        </div>
-                                        <SelectValue placeholder={loadingRutas ? "Cargando..." : (destinosUnicos.length === 0 ? "No disponible" : t("search_destination_placeholder"))} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {destinosUnicos.map((dest) => (
-                                            <SelectItem key={dest} value={dest}>{dest}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <MapIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+                                <Input
+                                    id="destino"
+                                    list="destinos-list"
+                                    placeholder={loadingRutas ? "Cargando..." : (destinosUnicos.length === 0 ? "No disponible" : t("search_destination_placeholder"))}
+                                    value={destino}
+                                    onChange={(e) => setDestino(e.target.value)}
+                                    className="pl-10"
+                                    disabled={loadingRutas || destinosUnicos.length === 0}
+                                />
+                                <datalist id="destinos-list">
+                                    {destinosUnicos.map((dest) => (
+                                        <option key={dest} value={dest} />
+                                    ))}
+                                </datalist>
                             </div>
                         </div>
 
