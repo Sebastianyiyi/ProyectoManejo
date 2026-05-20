@@ -12,6 +12,8 @@ import Auth from "./pages/Auth";
 import Buscar from "./pages/Buscar";
 import ChoferDashboard from "./pages/ChoferDashboard";
 import ConfiguracionPage from "./pages/ConfiguracionPage";
+import PerfilPage from "./pages/PerfilPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { Layout } from "./components/ui/Layout";
 import DashboardLayout from "./pages/dashboard/DashboardLayout";
 import BusesPage from "./pages/dashboard/BusesPage";
@@ -46,6 +48,8 @@ const App = () => (
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/chofer" element={<ChoferDashboard />} />
                   <Route path="/configuracion" element={<ConfiguracionPage />} />
+                  <Route path="/perfil" element={<PerfilPage />} />
+                  <Route path="/reset-password" element={<ResetPasswordPage />} />
                   <Route path="/compra/:viajeId" element={
                     <Suspense fallback={<div>Cargando...</div>}>
                       <PaginaCompra />
