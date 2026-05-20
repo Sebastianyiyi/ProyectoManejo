@@ -1,10 +1,11 @@
-import { Navigate, NavLink, Outlet } from "react-router-dom";
+import { Navigate, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Bus, LayoutDashboard, Map, Users, Ticket, LogOut } from "lucide-react";
+import { Bus, LayoutDashboard, Map, Users, Ticket, LogOut, Building2, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const NAV = [
   { to: "/dashboard", label: "Inicio", icon: LayoutDashboard, end: true },
+  { to: "/dashboard/cooperativa", label: "Cooperativa", icon: Building2 },
   { to: "/dashboard/buses", label: "Buses", icon: Bus },
   { to: "/dashboard/rutas", label: "Rutas", icon: Map },
   { to: "/dashboard/usuarios", label: "Usuarios", icon: Users },
@@ -13,6 +14,7 @@ const NAV = [
 
 export default function DashboardLayout() {
   const { user, loading, signOut, hasRole } = useAuth();
+  const navigate = useNavigate();
 
   if (loading) return <div className="flex h-screen items-center justify-center">Cargando...</div>;
 
@@ -52,7 +54,15 @@ export default function DashboardLayout() {
           ))}
         </nav>
 
-        <div className="p-3 border-t">
+        <div className="p-3 border-t space-y-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2 text-muted-foreground"
+            onClick={() => navigate("/configuracion")}
+          >
+            <Settings size={16} /> Configuración
+          </Button>
           <Button
             variant="ghost"
             size="sm"

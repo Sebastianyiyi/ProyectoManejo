@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Bus, LogOut, Menu, X, LayoutDashboard } from "lucide-react";
+import { Bus, LogOut, Menu, X, LayoutDashboard, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import {
@@ -7,12 +7,14 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLang } from "@/contexts/LanguageContext";
 
 export function Layout() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   const { user, signOut } = useAuth();
+  const { t } = useLang();
   const isAdmin = user?.role === "administrador";
   const isOficinista = user?.role === "oficinista";
 
@@ -73,9 +75,13 @@ export function Layout() {
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  <DropdownMenuItem onClick={() => navigate('/mis-reservas')}>Mis reservas</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/mis-reservas')}>{t("nav_reservations")}</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/configuracion')}>
+                    <Settings className="mr-2 h-4 w-4" /> {t("nav_settings")}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
+                    <LogOut className="mr-2 h-4 w-4" /> {t("nav_logout")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
