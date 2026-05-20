@@ -27,18 +27,18 @@ export function Layout() {
     <>
       <NavLink to="/buscar" className={({ isActive }) =>
         `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-foreground/70 hover:text-foreground'}`
-      }>Buscar viajes</NavLink>
+      }>{t("nav_search")}</NavLink>
 
       {user && (
         <NavLink to="/mis-reservas" className={({ isActive }) =>
           `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-foreground/70 hover:text-foreground'}`
-        }>Mis reservas</NavLink>
+        }>{t("nav_reservations")}</NavLink>
       )}
 
       {(isAdmin || isOficinista) && (
         <NavLink to="/dashboard" className={({ isActive }) =>
           `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-foreground/70 hover:text-foreground'}`
-        }>Panel de gestión</NavLink>
+        }>{t("nav_dashboard")}</NavLink>
       )}
     </>
   );
@@ -65,12 +65,12 @@ export function Layout() {
                   <Button variant="outline" size="sm">{(user as any).email}</Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Mi cuenta</DropdownMenuLabel>
+                  <DropdownMenuLabel>{t("nav_account")}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   {(isAdmin || isOficinista) && (
                     <>
                       <DropdownMenuItem onClick={() => navigate('/dashboard')}>
-                        <LayoutDashboard className="mr-2 h-4 w-4" /> Panel de gestión
+                        <LayoutDashboard className="mr-2 h-4 w-4" /> {t("nav_dashboard")}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                     </>
@@ -87,8 +87,8 @@ export function Layout() {
               </DropdownMenu>
             ) : (
               <>
-                <Button variant="ghost" size="sm" onClick={() => navigate('/auth')}>Ingresar</Button>
-                <Button size="sm" onClick={() => navigate('/auth?tab=signup')}>Crear cuenta</Button>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/auth')}>{t("nav_login")}</Button>
+                <Button size="sm" onClick={() => navigate('/auth?tab=signup')}>{t("nav_signup")}</Button>
               </>
             )}
           </div>
@@ -106,8 +106,8 @@ export function Layout() {
               {navLinks}
               {!user && (
                 <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate('/auth')}>Ingresar</Button>
-                  <Button size="sm" className="flex-1" onClick={() => navigate('/auth?tab=signup')}>Crear cuenta</Button>
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate('/auth')}>{t("nav_login")}</Button>
+                  <Button size="sm" className="flex-1" onClick={() => navigate('/auth?tab=signup')}>{t("nav_signup")}</Button>
                 </div>
               )}
             </div>
