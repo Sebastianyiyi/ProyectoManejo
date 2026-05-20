@@ -22,6 +22,7 @@ import { Layout } from "./components/ui/Layout";
 import DashboardLayout from "./pages/dashboard/DashboardLayout";
 import BusesPage from "./pages/dashboard/BusesPage";
 import CooperativaPerfilPage from "./pages/dashboard/CooperativaPerfilPage";
+import RutasPage from "./pages/dashboard/RutasPage";
 
 const PaginaCompra = lazy(() => import("./pages/PaginaCompra"));
 
@@ -83,6 +84,7 @@ const App = () => (
                   <Route index element={<DashboardHome />} />
                   <Route path="cooperativa" element={<CooperativaPerfilPage />} />
                   <Route path="buses" element={<BusesPage />} />
+                  <Route path="rutas" element={<RutasPage />} />
                 </Route>
               </Routes>
             </BrowserRouter>
