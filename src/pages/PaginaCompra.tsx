@@ -457,6 +457,18 @@ const labelDescuento: Record<TipoDescuento, string> = {
                 {viaje?.rutas?.ciudad_origen} → {viaje?.rutas?.ciudad_destino}
               </span>
             </div>
+            {/* Tipo de bus */}
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Tipo de bus</span>
+              {viaje?.buses?.tipo && tipoBusConfig[viaje.buses.tipo] ? (
+                <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${tipoBusConfig[viaje.buses.tipo].badge}`}>
+                  {tipoBusConfig[viaje.buses.tipo].icon}
+                  {tipoBusConfig[viaje.buses.tipo].label}
+                </span>
+              ) : (
+                <span>{viaje?.buses?.tipo}</span>
+              )}
+            </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Fecha</span>
               <span>
