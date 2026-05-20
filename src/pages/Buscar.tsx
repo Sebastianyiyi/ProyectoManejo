@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useLang } from "@/contexts/LanguageContext";
 
 // Interfaz de VladAlz con cooperativas anidadas en buses
 interface Viaje {
@@ -49,6 +50,7 @@ const tipoBusConfig: Record<string, { label: string; className: string }> = {
 export default function Buscar() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
+  const { t } = useLang();
   const today = new Date().toISOString().split("T")[0];
 
   const [origen, setOrigen] = useState(params.get("origen") || "");
@@ -145,7 +147,7 @@ export default function Buscar() {
 
           {/* Origen con autocompletado */}
           <div className="space-y-1.5 col-span-2 md:col-span-1">
-            <Label>Origen</Label>
+            <Label>{t("search_origin")}</Label>
             <div className="relative">
               <Input
                 value={origen}
@@ -159,7 +161,7 @@ export default function Buscar() {
                   );
                 }}
                 onBlur={() => setTimeout(() => setSugerenciasOrigen([]), 150)}
-                placeholder="Ciudad"
+                placeholder={t("buscar_city")}
                 autoComplete="off"
               />
               {sugerenciasOrigen.length > 0 && (
@@ -180,7 +182,7 @@ export default function Buscar() {
 
           {/* Destino con autocompletado */}
           <div className="space-y-1.5 col-span-2 md:col-span-1">
-            <Label>Destino</Label>
+            <Label>{t("search_destination")}</Label>
             <div className="relative">
               <Input
                 value={destino}
@@ -194,7 +196,7 @@ export default function Buscar() {
                   );
                 }}
                 onBlur={() => setTimeout(() => setSugerenciasDestino([]), 150)}
-                placeholder="Ciudad"
+                placeholder={t("buscar_city")}
                 autoComplete="off"
               />
               {sugerenciasDestino.length > 0 && (
@@ -214,25 +216,25 @@ export default function Buscar() {
           </div>
 
           <div className="space-y-1.5">
-            <Label>Fecha</Label>
+            <Label>{t("search_date")}</Label>
             <Input type="date" min={today} value={fecha} onChange={(e) => setFecha(e.target.value)} />
           </div>
 
           <div className="space-y-1.5">
-            <Label>Tipo de bus</Label>
+            <Label>{t("buscar_bus_type")}</Label>
             <Select value={tipo} onValueChange={setTipo}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="economico">Normal</SelectItem>
-                <SelectItem value="ejecutivo">VIP</SelectItem>
-                <SelectItem value="premium">Doble Piso</SelectItem>
+                <SelectItem value="todos" className="focus:bg-primary focus:text-primary-foreground">{t("buscar_all")}</SelectItem>
+                <SelectItem value="normal" className="focus:bg-primary focus:text-primary-foreground">Normal</SelectItem>
+                <SelectItem value="vip" className="focus:bg-primary focus:text-primary-foreground">VIP</SelectItem>
+                <SelectItem value="doble_piso" className="focus:bg-primary focus:text-primary-foreground">Doble Piso</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="flex items-end">
-            <Button type="submit" className="w-full">Buscar</Button>
+            <Button type="submit" className="w-full">{t("buscar_btn")}</Button>
           </div>
         </form>
       </Card>
@@ -244,8 +246,8 @@ export default function Buscar() {
       ) : resultados.length === 0 ? (
         <Card className="p-12 text-center">
           <Bus className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-          <h3 className="font-semibold mb-1">No encontramos viajes</h3>
-          <p className="text-sm text-muted-foreground">Prueba ajustando los filtros o cambia la fecha.</p>
+          <h3 className="font-semibold mb-1">{t("buscar_empty_title")}</h3>
+          <p className="text-sm text-muted-foreground">{t("buscar_empty_desc")}</p>
         </Card>
       ) : (
         <div className="space-y-3">
@@ -299,7 +301,7 @@ export default function Buscar() {
                         ${calcularPrecio(Number(v.precio_base), tipoDescuento).toFixed(2)}
                       </p>
                       <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-                        50% dto. aplicado
+                        {t("buscar_discount_applied")}
                       </span>
                     </div>
                   ) : (
@@ -308,7 +310,7 @@ export default function Buscar() {
                     </div>
                   )}
                   <Button onClick={() => navigate(`/compra/${v.id}`)}>
-                    Elegir asientos
+                    {t("buscar_select_seats")}
                   </Button>
                 </div>
               </div>

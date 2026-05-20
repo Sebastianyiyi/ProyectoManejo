@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Bus, LogOut, Menu, X } from "lucide-react";
+import { Bus, LogOut, Menu, X, LayoutDashboard, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import {
@@ -7,12 +7,14 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLang } from "@/contexts/LanguageContext";
 
 export function Layout() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   const { user, signOut } = useAuth();
+  const { t } = useLang();
   const isAdmin = user?.role === "administrador";
   const isOficinista = user?.role === "oficinista";
 
@@ -23,14 +25,22 @@ export function Layout() {
 
   const navLinks = (
     <>
-      <NavLink to="/buscar" className={({ isActive }) =>
-        `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-foreground/70 hover:text-foreground'}`
-      }>Buscar viajes</NavLink>
-      
-      {user && (
+      {!isAdmin && !isOficinista && (
+        <NavLink to="/buscar" className={({ isActive }) =>
+          `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-foreground/70 hover:text-foreground'}`
+        }>{t("nav_search")}</NavLink>
+      )}
+
+      {user && !isAdmin && !isOficinista && (
         <NavLink to="/mis-reservas" className={({ isActive }) =>
           `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-foreground/70 hover:text-foreground'}`
-        }>Mis reservas</NavLink>
+        }>{t("nav_reservations")}</NavLink>
+      )}
+
+      {(isAdmin || isOficinista) && (
+        <NavLink to="/dashboard" className={({ isActive }) =>
+          `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-foreground/70 hover:text-foreground'}`
+        }>{t("nav_dashboard")}</NavLink>
       )}
     </>
   );
@@ -57,18 +67,32 @@ export function Layout() {
                   <Button variant="outline" size="sm">{(user as any).email}</Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Mi cuenta</DropdownMenuLabel>
+                  <DropdownMenuLabel>{t("nav_account")}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/mis-reservas')}>Mis reservas</DropdownMenuItem>
+                  {(isAdmin || isOficinista) && (
+                    <>
+                      <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                        <LayoutDashboard className="mr-2 h-4 w-4" /> {t("nav_dashboard")}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  {!isAdmin && !isOficinista && (
+                    <DropdownMenuItem onClick={() => navigate('/mis-reservas')}>{t("nav_reservations")}</DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => navigate('/configuracion')}>
+                    <Settings className="mr-2 h-4 w-4" /> {t("nav_settings")}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
+                    <LogOut className="mr-2 h-4 w-4" /> {t("nav_logout")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
               <>
-                <Button variant="ghost" size="sm" onClick={() => navigate('/auth')}>Ingresar</Button>
-                <Button size="sm" onClick={() => navigate('/auth?tab=signup')}>Crear cuenta</Button>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/auth')}>{t("nav_login")}</Button>
+                <Button size="sm" onClick={() => navigate('/auth?tab=signup')}>{t("nav_signup")}</Button>
               </>
             )}
           </div>
@@ -86,8 +110,8 @@ export function Layout() {
               {navLinks}
               {!user && (
                 <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate('/auth')}>Ingresar</Button>
-                  <Button size="sm" className="flex-1" onClick={() => navigate('/auth?tab=signup')}>Crear cuenta</Button>
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate('/auth')}>{t("nav_login")}</Button>
+                  <Button size="sm" className="flex-1" onClick={() => navigate('/auth?tab=signup')}>{t("nav_signup")}</Button>
                 </div>
               )}
             </div>
@@ -103,10 +127,10 @@ export function Layout() {
       {/* FOOTER */}
       <footer className="border-t border-border/60 bg-card mt-12">
         <div className="container py-8 text-sm text-muted-foreground flex flex-col md:flex-row justify-between gap-4">
-          <p>© {new Date().getFullYear()} BusEcuador — Sistema de venta de boletos.</p>
-          <p>Hecho para cooperativas de transporte del Ecuador.</p>
+          <p>© {new Date().getFullYear()} BusEcuador — {t("footer_rights")}</p>
+          <p>{t("footer_made_for")}</p>
         </div>
       </footer>
-    </div> 
+    </div>
   );
 }
