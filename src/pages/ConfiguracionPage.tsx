@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useLang } from "@/contexts/LanguageContext";
 import type { Lang } from "@/contexts/LanguageContext";
@@ -7,10 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Sun, Moon, Globe, Bell, User, Save, Eye, EyeOff } from "lucide-react";
+import { Sun, Moon, Globe, Bell, User, ChevronRight, KeyRound } from "lucide-react";
 
 function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
@@ -36,16 +34,12 @@ export default function ConfiguracionPage() {
   const { theme, toggleTheme } = useTheme();
   const { lang, setLang, t } = useLang();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [notifications, setNotifications] = useState(
     () => localStorage.getItem("notifications") !== "false"
   );
-  const [name, setName] = useState(user?.name ?? "");
-  const [photoUrl, setPhotoUrl] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPass, setShowPass] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
 
   if (!user) return <Navigate to="/auth" replace />;
 
@@ -55,33 +49,23 @@ export default function ConfiguracionPage() {
     localStorage.setItem("notifications", String(next));
   };
 
-  const handleSaveProfile = async () => {
-    if (!name.trim()) {
-      toast({ title: t("config_name_required"), variant: "destructive" });
-      return;
-    }
-    if (password && password !== confirmPassword) {
-      toast({ title: t("config_password_mismatch"), variant: "destructive" });
-      return;
-    }
+  const handlePasswordReset = async () => {
     try {
-      setSaving(true);
-      if (user.id) {
-        await supabase
-          .from("usuarios")
-          .update({ full_name: name })
-          .eq("id", user.id);
-      }
-      if (password) {
-        await supabase.auth.updateUser({ password });
-      }
-      toast({ title: t("config_saved") });
-      setPassword("");
-      setConfirmPassword("");
+      setSendingReset(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast({
+        title: lang === "es" ? "Correo enviado ✓" : "Email sent ✓",
+        description: lang === "es"
+          ? "Revisa tu bandeja de entrada para continuar"
+          : "Check your inbox to continue",
+      });
     } catch {
-      toast({ title: "Error al guardar", variant: "destructive" });
+      toast({ title: lang === "es" ? "Error al enviar el correo" : "Error sending email", variant: "destructive" });
     } finally {
-      setSaving(false);
+      setSendingReset(false);
     }
   };
 
@@ -90,9 +74,7 @@ export default function ConfiguracionPage() {
       <div>
         <h1 className="text-2xl font-bold">{t("config_title")}</h1>
         <p className="text-muted-foreground text-sm">
-          {lang === "es"
-            ? "Preferencias personales de la plataforma"
-            : "Personal platform preferences"}
+          {lang === "es" ? "Preferencias personales de la plataforma" : "Personal platform preferences"}
         </p>
       </div>
 
@@ -156,64 +138,36 @@ export default function ConfiguracionPage() {
           <h2 className="font-semibold">{t("config_profile")}</h2>
         </div>
 
-        <div className="space-y-1">
-          <Label>{t("config_name")}</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} />
+        <div className="text-sm space-y-0.5">
+          <p className="font-medium text-base">{user.name}</p>
+          <p className="text-muted-foreground">{user.email}</p>
+          <span className="inline-block text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full capitalize mt-1">
+            {user.role}
+          </span>
         </div>
 
-        <div className="space-y-1">
-          <Label>{t("config_photo")}</Label>
-          <Input
-            placeholder="https://..."
-            value={photoUrl}
-            onChange={(e) => setPhotoUrl(e.target.value)}
-          />
-          {photoUrl && (
-            <img
-              src={photoUrl}
-              alt="preview"
-              className="mt-2 h-14 w-14 rounded-full object-cover border"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-            />
-          )}
-        </div>
-
-        <div className="space-y-1">
-          <Label>{t("config_password")}</Label>
-          <div className="relative">
-            <Input
-              type={showPass ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="pr-10"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPass((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-            >
-              {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          </div>
-        </div>
-
-        {password && (
-          <div className="space-y-1">
-            <Label>{t("config_confirm_password")}</Label>
-            <Input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="••••••••"
-            />
-          </div>
-        )}
-
-        <div className="flex justify-end pt-2">
-          <Button onClick={handleSaveProfile} disabled={saving} className="gap-2">
-            <Save size={16} />
-            {saving ? t("config_saving") : t("config_save")}
+        <div className="flex flex-col sm:flex-row gap-2 pt-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => navigate("/perfil")}
+          >
+            <User size={14} />
+            {lang === "es" ? "Editar datos" : "Edit profile"}
+            <ChevronRight size={14} className="ml-auto" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            disabled={sendingReset}
+            onClick={handlePasswordReset}
+          >
+            <KeyRound size={14} />
+            {sendingReset
+              ? (lang === "es" ? "Enviando..." : "Sending...")
+              : (lang === "es" ? "Cambiar contraseña" : "Change password")}
           </Button>
         </div>
       </Card>
