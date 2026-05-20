@@ -29,7 +29,7 @@ export function Layout() {
         `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-foreground/70 hover:text-foreground'}`
       }>{t("nav_search")}</NavLink>
 
-      {user && (
+      {user && !isAdmin && !isOficinista && (
         <NavLink to="/mis-reservas" className={({ isActive }) =>
           `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-foreground/70 hover:text-foreground'}`
         }>{t("nav_reservations")}</NavLink>
@@ -75,7 +75,9 @@ export function Layout() {
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  <DropdownMenuItem onClick={() => navigate('/mis-reservas')}>{t("nav_reservations")}</DropdownMenuItem>
+                  {!isAdmin && !isOficinista && (
+                    <DropdownMenuItem onClick={() => navigate('/mis-reservas')}>{t("nav_reservations")}</DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => navigate('/configuracion')}>
                     <Settings className="mr-2 h-4 w-4" /> {t("nav_settings")}
                   </DropdownMenuItem>
