@@ -18,6 +18,8 @@ export default function Index() {
     const [origen, setOrigen] = useState("");
     const [destino, setDestino] = useState("");
     const [fecha, setFecha] = useState("");
+    const [sugerenciasOrigen, setSugerenciasOrigen] = useState<string[]>([]);
+    const [sugerenciasDestino, setSugerenciasDestino] = useState<string[]>([]);
     const [rutas, setRutas] = useState<Ruta[]>([]);
     const [loadingRutas, setLoadingRutas] = useState(true);
 
@@ -88,18 +90,35 @@ export default function Index() {
                                 <MapIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
                                 <Input
                                     id="origen"
-                                    list="origenes-list"
                                     placeholder={loadingRutas ? "Cargando..." : (origenesUnicos.length === 0 ? "No disponible" : t("search_origin_placeholder"))}
                                     value={origen}
-                                    onChange={(e) => setOrigen(e.target.value)}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setOrigen(val);
+                                        setSugerenciasOrigen(
+                                            val.length > 0
+                                                ? origenesUnicos.filter((c) => c.toLowerCase().startsWith(val.toLowerCase()))
+                                                : []
+                                        );
+                                    }}
+                                    onBlur={() => setTimeout(() => setSugerenciasOrigen([]), 150)}
+                                    autoComplete="off"
                                     className="pl-10"
                                     disabled={loadingRutas || origenesUnicos.length === 0}
                                 />
-                                <datalist id="origenes-list">
-                                    {origenesUnicos.map((org) => (
-                                        <option key={org} value={org} />
-                                    ))}
-                                </datalist>
+                                {sugerenciasOrigen.length > 0 && (
+                                    <ul className="absolute z-50 w-full bg-popover text-popover-foreground border border-border rounded-md shadow-md mt-1 max-h-48 overflow-y-auto">
+                                        {sugerenciasOrigen.map((c) => (
+                                            <li
+                                                key={c}
+                                                className="px-4 py-2 text-sm cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                                                onMouseDown={() => { setOrigen(c); setSugerenciasOrigen([]); }}
+                                            >
+                                                {c}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
                             </div>
                         </div>
 
@@ -109,18 +128,35 @@ export default function Index() {
                                 <MapIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
                                 <Input
                                     id="destino"
-                                    list="destinos-list"
                                     placeholder={loadingRutas ? "Cargando..." : (destinosUnicos.length === 0 ? "No disponible" : t("search_destination_placeholder"))}
                                     value={destino}
-                                    onChange={(e) => setDestino(e.target.value)}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setDestino(val);
+                                        setSugerenciasDestino(
+                                            val.length > 0
+                                                ? destinosUnicos.filter((c) => c.toLowerCase().startsWith(val.toLowerCase()))
+                                                : []
+                                        );
+                                    }}
+                                    onBlur={() => setTimeout(() => setSugerenciasDestino([]), 150)}
+                                    autoComplete="off"
                                     className="pl-10"
                                     disabled={loadingRutas || destinosUnicos.length === 0}
                                 />
-                                <datalist id="destinos-list">
-                                    {destinosUnicos.map((dest) => (
-                                        <option key={dest} value={dest} />
-                                    ))}
-                                </datalist>
+                                {sugerenciasDestino.length > 0 && (
+                                    <ul className="absolute z-50 w-full bg-popover text-popover-foreground border border-border rounded-md shadow-md mt-1 max-h-48 overflow-y-auto">
+                                        {sugerenciasDestino.map((c) => (
+                                            <li
+                                                key={c}
+                                                className="px-4 py-2 text-sm cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                                                onMouseDown={() => { setDestino(c); setSugerenciasDestino([]); }}
+                                            >
+                                                {c}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
                             </div>
                         </div>
 
