@@ -1,5 +1,5 @@
 import { Navigate, Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LanguageContext";
 import { Bus, MapPin, ShieldCheck, QrCode, CreditCard, Users, MapIcon, CalendarIcon } from "lucide-react";
@@ -7,6 +7,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { rutasService } from "@/lib/rutasService";
+import type { Ruta } from "@/lib/rutasService";
 
 export default function Index() {
     const { user, loading } = useAuth();
@@ -15,6 +18,25 @@ export default function Index() {
     const [origen, setOrigen] = useState("");
     const [destino, setDestino] = useState("");
     const [fecha, setFecha] = useState("");
+    const [rutas, setRutas] = useState<Ruta[]>([]);
+    const [loadingRutas, setLoadingRutas] = useState(true);
+
+    useEffect(() => {
+        const fetchRutas = async () => {
+            try {
+                const data = await rutasService.getAll();
+                setRutas(data);
+            } catch (error) {
+                console.error("Error al cargar rutas", error);
+            } finally {
+                setLoadingRutas(false);
+            }
+        };
+        fetchRutas();
+    }, []);
+
+    const origenesUnicos = Array.from(new Set(rutas.map(r => r.ciudad_origen))).sort();
+    const destinosUnicos = Array.from(new Set(rutas.map(r => r.ciudad_destino))).sort();
 
     if (!loading && user && (user.role === "administrador" || user.role === "oficinista")) {
         return <Navigate to="/dashboard" replace />;
@@ -63,28 +85,38 @@ export default function Index() {
                         <div className="space-y-2">
                             <Label htmlFor="origen" className="text-sm font-medium">{t("search_origin")}</Label>
                             <div className="relative">
-                                <MapIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
-                                <Input
-                                    id="origen"
-                                    placeholder={t("search_origin_placeholder")}
-                                    value={origen}
-                                    onChange={(e) => setOrigen(e.target.value)}
-                                    className="pl-10"
-                                />
+                                <Select value={origen} onValueChange={setOrigen} disabled={loadingRutas || origenesUnicos.length === 0}>
+                                    <SelectTrigger className="pl-10">
+                                        <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                                            <MapIcon className="h-5 w-5 text-muted-foreground pointer-events-none" />
+                                        </div>
+                                        <SelectValue placeholder={loadingRutas ? "Cargando..." : (origenesUnicos.length === 0 ? "No disponible" : t("search_origin_placeholder"))} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {origenesUnicos.map((org) => (
+                                            <SelectItem key={org} value={org}>{org}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </div>
 
                         <div className="space-y-2">
                             <Label htmlFor="destino" className="text-sm font-medium">{t("search_destination")}</Label>
                             <div className="relative">
-                                <MapIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
-                                <Input
-                                    id="destino"
-                                    placeholder={t("search_destination_placeholder")}
-                                    value={destino}
-                                    onChange={(e) => setDestino(e.target.value)}
-                                    className="pl-10"
-                                />
+                                <Select value={destino} onValueChange={setDestino} disabled={loadingRutas || destinosUnicos.length === 0}>
+                                    <SelectTrigger className="pl-10">
+                                        <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                                            <MapIcon className="h-5 w-5 text-muted-foreground pointer-events-none" />
+                                        </div>
+                                        <SelectValue placeholder={loadingRutas ? "Cargando..." : (destinosUnicos.length === 0 ? "No disponible" : t("search_destination_placeholder"))} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {destinosUnicos.map((dest) => (
+                                            <SelectItem key={dest} value={dest}>{dest}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </div>
 
