@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
+import { useLang } from "@/contexts/LanguageContext";
 import {
   CheckCircle2,
   Bus,
@@ -65,6 +66,7 @@ const tipoBusConfig: Record<string, { label: string; badge: string; icon: React.
 export default function PaginaCompra() {
   const { viajeId } = useParams<{ viajeId: string }>();
   const navigate = useNavigate();
+  const { t } = useLang();
 
   // Estado general
   const [etapa, setEtapa] = useState<Etapa>("asientos");
@@ -208,7 +210,7 @@ export default function PaginaCompra() {
 
   // ─── Etiqueta de descuento ────────────────────────────────────────────────
 const labelDescuento: Record<TipoDescuento, string> = {
-  ninguno: "Sin descuento",   // ← era "normal"
+  ninguno: t("compra_no_discount"),
   menor: "50% — Menor de edad",
   discapacidad: "50% — Discapacidad",
   tercera_edad: "50% — Tercera edad",
@@ -220,7 +222,7 @@ const labelDescuento: Record<TipoDescuento, string> = {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-3">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto" />
-          <p className="text-muted-foreground">Cargando disponibilidad...</p>
+          <p className="text-muted-foreground">{t("compra_loading")}</p>
         </div>
       </div>
     );
@@ -230,7 +232,7 @@ const labelDescuento: Record<TipoDescuento, string> = {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-red-500 text-center">
-          <p className="text-xl font-semibold">Error</p>
+          <p className="text-xl font-semibold">{t("compra_error")}</p>
           <p>{error}</p>
         </div>
       </div>
@@ -245,7 +247,7 @@ const labelDescuento: Record<TipoDescuento, string> = {
         <div className="bg-card border rounded-xl p-5 shadow-sm">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <p className="text-sm text-muted-foreground">Viaje seleccionado</p>
+              <p className="text-sm text-muted-foreground">{t("compra_trip_selected")}</p>
               <h1 className="text-2xl font-bold text-foreground">
                 {viaje?.rutas?.ciudad_origen} → {viaje?.rutas?.ciudad_destino}
               </h1>
@@ -269,11 +271,11 @@ const labelDescuento: Record<TipoDescuento, string> = {
               )}
             </div>
             <div className="text-right space-y-1">
-              <p className="text-sm text-muted-foreground">Precio por asiento</p>
+              <p className="text-sm text-muted-foreground">{t("compra_price_per_seat")}</p>
               {tipoDescuento !== "ninguno" ? (
                 <>
                   <p className="text-sm text-muted-foreground line-through">
-                    ${precioBase.toFixed(2)} precio base
+                    ${precioBase.toFixed(2)} {t("compra_base_price")}
                   </p>
                   <p className="text-3xl font-bold text-blue-600">
                     ${precioUnitario.toFixed(2)}
@@ -295,15 +297,15 @@ const labelDescuento: Record<TipoDescuento, string> = {
         <div className="flex gap-6 text-sm flex-wrap">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded bg-muted border" />
-            <span className="text-muted-foreground">Disponible</span>
+            <span className="text-muted-foreground">{t("compra_available")}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded bg-blue-500" />
-            <span className="text-muted-foreground">Seleccionado</span>
+            <span className="text-muted-foreground">{t("compra_selected")}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded bg-gray-400" />
-            <span className="text-muted-foreground">Ocupado</span>
+            <span className="text-muted-foreground">{t("compra_occupied")}</span>
           </div>
         </div>
 
@@ -313,7 +315,7 @@ const labelDescuento: Record<TipoDescuento, string> = {
           <div className="flex justify-center mb-4">
             <div className="bg-muted rounded-lg px-8 py-2 text-sm text-muted-foreground font-medium flex items-center gap-2">
               <Bus className="h-4 w-4" />
-              Frente del bus
+              {t("compra_bus_front")}
             </div>
           </div>
 
@@ -322,7 +324,7 @@ const labelDescuento: Record<TipoDescuento, string> = {
             <div className="flex items-center gap-3 mb-3">
               <div className="flex-1 border-t border-border" />
               <span className="text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-300 px-3 py-1 rounded-full">
-                Piso 1
+                {t("compra_floor1")}
               </span>
               <div className="flex-1 border-t border-border" />
             </div>
@@ -347,7 +349,7 @@ const labelDescuento: Record<TipoDescuento, string> = {
                       <div className="flex items-center gap-3 my-4">
                         <div className="flex-1 border-t border-border" />
                         <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-300 px-3 py-1 rounded-full">
-                          Piso 2 — Premium
+                          {t("compra_floor2")}
                         </span>
                         <div className="flex-1 border-t border-border" />
                       </div>
@@ -414,8 +416,8 @@ const labelDescuento: Record<TipoDescuento, string> = {
             <div>
               <p className="text-sm text-muted-foreground">
                 {seleccionados.length === 0
-                  ? "No has seleccionado asientos"
-                  : `${seleccionados.length} asiento${seleccionados.length > 1 ? "s" : ""} seleccionado${seleccionados.length > 1 ? "s" : ""}`}
+                  ? t("compra_select_prompt_single")
+                  : `${seleccionados.length} ${t("compra_select_prompt_multi")}`}
               </p>
               {seleccionados.length > 0 && (
                 <p className="text-2xl font-bold text-foreground mt-1">
@@ -428,7 +430,7 @@ const labelDescuento: Record<TipoDescuento, string> = {
               disabled={seleccionados.length === 0}
               className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white font-semibold px-8 py-3 rounded-xl transition-colors"
             >
-              Continuar al pago →
+              {t("compra_continue")}
             </button>
           </div>
         </div>
@@ -444,22 +446,22 @@ const labelDescuento: Record<TipoDescuento, string> = {
           onClick={() => setEtapa("asientos")}
           className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
         >
-          ← Volver a asientos
+          {t("compra_back")}
         </button>
 
         <div className="bg-card border rounded-xl p-5 shadow-sm space-y-4">
-          <h2 className="text-xl font-bold">Resumen de compra</h2>
+          <h2 className="text-xl font-bold">{t("compra_summary_title")}</h2>
 
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Ruta</span>
+              <span className="text-muted-foreground">{t("compra_route")}</span>
               <span className="font-medium">
                 {viaje?.rutas?.ciudad_origen} → {viaje?.rutas?.ciudad_destino}
               </span>
             </div>
             {/* Tipo de bus */}
             <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Tipo de bus</span>
+              <span className="text-muted-foreground">{t("compra_bus_type")}</span>
               {viaje?.buses?.tipo && tipoBusConfig[viaje.buses.tipo] ? (
                 <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${tipoBusConfig[viaje.buses.tipo].badge}`}>
                   {tipoBusConfig[viaje.buses.tipo].icon}
@@ -470,7 +472,7 @@ const labelDescuento: Record<TipoDescuento, string> = {
               )}
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Fecha</span>
+              <span className="text-muted-foreground">{t("compra_date")}</span>
               <span>
                 {viaje?.fecha_salida
                   ? new Date(viaje.fecha_salida).toLocaleString("es-EC", {
@@ -481,35 +483,35 @@ const labelDescuento: Record<TipoDescuento, string> = {
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Pasajero</span>
+              <span className="text-muted-foreground">{t("compra_passenger")}</span>
               <span>{usuario?.full_name}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Asientos</span>
+              <span className="text-muted-foreground">{t("compra_seats")}</span>
               <span>{seleccionados.length} asiento{seleccionados.length > 1 ? "s" : ""}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Descuento</span>
+              <span className="text-muted-foreground">{t("compra_discount")}</span>
                 <span className={tipoDescuento !== "ninguno" ? "text-green-600 font-medium" : ""}>
                 {labelDescuento[tipoDescuento]}
               </span>
             </div>
             <div className="border-t pt-2 flex justify-between text-base font-bold">
-              <span>Total a pagar</span>
+              <span>{t("compra_total")}</span>
               <span className="text-blue-600">${totalPagar.toFixed(2)}</span>
             </div>
           </div>
         </div>
 
         <div className="bg-card border rounded-xl p-5 shadow-sm space-y-4">
-          <h2 className="text-xl font-bold">Comprobante de pago</h2>
+          <h2 className="text-xl font-bold">{t("compra_voucher_title")}</h2>
           <p className="text-sm text-muted-foreground">
-            Realiza la transferencia y sube el comprobante. Un oficinista verificará el pago.
+            {t("compra_voucher_desc")}
           </p>
 
           {/* Datos bancarios (edita con los datos reales) */}
           <div className="bg-muted rounded-lg p-4 text-sm space-y-1">
-            <p className="font-semibold text-foreground">Datos de transferencia:</p>
+            <p className="font-semibold text-foreground">{t("compra_transfer_data")}</p>
             <p className="text-muted-foreground">Banco: Banco Pichincha</p>
             <p className="text-muted-foreground">Cuenta: 2200XXXXXXXX</p>
             <p className="text-muted-foreground">Tipo: Corriente</p>
@@ -520,7 +522,7 @@ const labelDescuento: Record<TipoDescuento, string> = {
           {/* Upload comprobante */}
           <div>
             <label className="block text-sm font-medium mb-2">
-              Subir comprobante (imagen o PDF)
+              {t("compra_upload_label")}
             </label>
             <input
               type="file"
@@ -547,7 +549,7 @@ const labelDescuento: Record<TipoDescuento, string> = {
           className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40
             text-white font-semibold py-3 rounded-xl transition-colors"
         >
-          {subiendoPago ? "Procesando reserva..." : "Confirmar reserva y enviar comprobante"}
+          {subiendoPago ? t("compra_submitting") : t("compra_submit")}
         </button>
       </div>
     );
@@ -560,30 +562,30 @@ const labelDescuento: Record<TipoDescuento, string> = {
         <div className="flex justify-center">
           <CheckCircle2 className="h-14 w-14 text-green-500" />
         </div>
-        <h1 className="text-2xl font-bold text-foreground">Reserva confirmada</h1>
+        <h1 className="text-2xl font-bold text-foreground">{t("compra_confirmed_title")}</h1>
         <p className="text-muted-foreground text-sm">
-          Tu comprobante fue recibido. El oficinista verificará el pago pronto.
+          {t("compra_confirmed_desc")}
         </p>
       </div>
 
       <div className="bg-card border rounded-xl p-6 shadow-sm space-y-4">
         <div className="text-sm space-y-2">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Reserva #</span>
+            <span className="text-muted-foreground">{t("compra_reservation_num")}</span>
             <span className="font-mono font-bold">{reservaId}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Ruta</span>
+            <span className="text-muted-foreground">{t("compra_route")}</span>
             <span className="font-medium">
               {viaje?.rutas?.ciudad_origen} → {viaje?.rutas?.ciudad_destino}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Pasajero</span>
+            <span className="text-muted-foreground">{t("compra_passenger")}</span>
             <span>{usuario?.full_name}</span>
           </div>
           <div className="flex justify-between border-t pt-2 font-bold">
-            <span>Total pagado</span>
+            <span>{t("compra_total_paid")}</span>
             <span className="text-blue-600">${precioFinal.toFixed(2)}</span>
           </div>
         </div>
@@ -592,7 +594,7 @@ const labelDescuento: Record<TipoDescuento, string> = {
         {codigoQr && (
           <div className="flex flex-col items-center gap-3 pt-2">
             <p className="text-sm font-medium text-muted-foreground">
-              Muestra este QR al subir al bus
+              {t("compra_qr_hint")}
             </p>
             <div className="border-4 border-white shadow-lg rounded-xl p-3 bg-white">
             <QRCodeSVG value={codigoQr} size={200} level="H" />
@@ -611,7 +613,7 @@ const labelDescuento: Record<TipoDescuento, string> = {
             hover:bg-accent transition-colors flex items-center justify-center gap-2"
         >
           <Printer className="h-4 w-4" />
-          Imprimir boleto
+          {t("compra_print")}
         </button>
         <button
           onClick={() => navigate("/")}
@@ -619,7 +621,7 @@ const labelDescuento: Record<TipoDescuento, string> = {
             py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2"
         >
           <Home className="h-4 w-4" />
-          Ir al inicio
+          {t("compra_go_home")}
         </button>
       </div>
     </div>

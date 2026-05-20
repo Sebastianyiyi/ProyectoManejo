@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLang } from "@/contexts/LanguageContext";
+import type { TKey } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -425,18 +427,13 @@ function obtenerPrimerElemento<T>(valor: T | T[] | null | undefined): T | null {
   return Array.isArray(valor) ? valor[0] ?? null : valor;
 }
 
-function obtenerMensajeEstadoReserva(estado?: string | null): string {
+function obtenerMensajeEstadoReserva(estado: string | null | undefined, t: (k: TKey) => string): string {
   switch (estado) {
-    case "pendiente_pago":
-      return "La reserva está pendiente de pago. No se puede validar la asistencia.";
-    case "pago_en_verificacion":
-      return "El pago de la reserva está en verificación. No se puede validar la asistencia todavía.";
-    case "cancelada":
-      return "La reserva está cancelada. No se puede validar la asistencia.";
-    case "confirmada":
-      return "";
-    default:
-      return "La reserva no tiene un estado válido para validar asistencia.";
+    case "pendiente_pago": return t("chofer_reserve_pending");
+    case "pago_en_verificacion": return t("chofer_reserve_verifying");
+    case "cancelada": return t("chofer_reserve_cancelled");
+    case "confirmada": return "";
+    default: return t("chofer_reserve_invalid");
   }
 }
 
@@ -565,6 +562,7 @@ const QR_READER_ID = "qr-reader-chofer";
 export default function ChoferDashboard() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const { t } = useLang();
 
   const [viajes, setViajes] = useState<ViajeChofer[]>([]);
   const [cargandoViajes, setCargandoViajes] = useState(true);
@@ -1477,7 +1475,7 @@ export default function ChoferDashboard() {
     }
 
     if (estadoReserva !== "confirmada") {
-      toast.error(obtenerMensajeEstadoReserva(estadoReserva));
+      toast.error(obtenerMensajeEstadoReserva(estadoReserva, t));
       return;
     }
 
@@ -1524,7 +1522,7 @@ export default function ChoferDashboard() {
     return (
       <div className="container py-10 flex items-center gap-2">
         <Loader2 className="h-5 w-5 animate-spin" />
-        <span>Cargando sesión...</span>
+        <span>{t("chofer_loading")}</span>
       </div>
     );
   }
@@ -1532,18 +1530,17 @@ export default function ChoferDashboard() {
   return (
     <div className="container py-8 space-y-8">
       <section className="space-y-2">
-        <h1 className="text-3xl font-bold">Panel del Chofer</h1>
+        <h1 className="text-3xl font-bold">{t("chofer_title")}</h1>
         <p className="text-muted-foreground">
-          Bienvenido, {user?.name}. Desde aquí podrás revisar tus viajes asignados,
-          validar boletos por QR y registrar ventas presenciales.
+          {t("auth_welcome")}, {user?.name}. {t("chofer_desc")}
         </p>
       </section>
 
       <Tabs defaultValue="viajes" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="viajes">Mis viajes</TabsTrigger>
-          <TabsTrigger value="qr">Escanear QR</TabsTrigger>
-          <TabsTrigger value="venta">Venta presencial</TabsTrigger>
+          <TabsTrigger value="viajes">{t("chofer_tab_trips")}</TabsTrigger>
+          <TabsTrigger value="qr">{t("chofer_tab_qr")}</TabsTrigger>
+          <TabsTrigger value="venta">{t("chofer_tab_sale")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="viajes" className="space-y-6">
@@ -1555,7 +1552,7 @@ export default function ChoferDashboard() {
                 </div>
 
                 <div>
-                  <p className="text-sm text-muted-foreground">Viajes asignados</p>
+                  <p className="text-sm text-muted-foreground">{t("chofer_stat_assigned")}</p>
                   <p className="text-2xl font-bold">{viajes.length}</p>
                 </div>
               </div>
@@ -1568,11 +1565,11 @@ export default function ChoferDashboard() {
                 </div>
 
                 <div>
-                  <p className="text-sm text-muted-foreground">Próximo viaje</p>
+                  <p className="text-sm text-muted-foreground">{t("chofer_stat_next")}</p>
                   <p className="text-lg font-semibold">
                     {viajes[0]
                       ? new Date(viajes[0].fecha_salida).toLocaleDateString()
-                      : "Sin viajes"}
+                      : t("chofer_stat_no_trips")}
                   </p>
                 </div>
               </div>
@@ -1585,24 +1582,24 @@ export default function ChoferDashboard() {
                 </div>
 
                 <div>
-                  <p className="text-sm text-muted-foreground">Validación de boletos</p>
-                  <p className="text-lg font-semibold">Disponible</p>
+                  <p className="text-sm text-muted-foreground">{t("chofer_stat_validation")}</p>
+                  <p className="text-lg font-semibold">{t("chofer_stat_available")}</p>
                 </div>
               </div>
             </Card>
           </section>
 
           <section className="space-y-4">
-            <h2 className="text-xl font-semibold">Mis viajes asignados</h2>
+            <h2 className="text-xl font-semibold">{t("chofer_trips_title")}</h2>
 
             {cargandoViajes ? (
               <Card className="p-6 flex items-center gap-2">
                 <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Cargando viajes...</span>
+                <span>{t("chofer_trips_loading")}</span>
               </Card>
             ) : viajes.length === 0 ? (
               <Card className="p-6 text-muted-foreground">
-                No tienes viajes asignados por el momento.
+                {t("chofer_trips_empty")}
               </Card>
             ) : (
               <div className="grid gap-4">
@@ -1620,21 +1617,21 @@ export default function ChoferDashboard() {
                         </div>
 
                         <p className="text-sm text-muted-foreground">
-                          Salida: {new Date(viaje.fecha_salida).toLocaleString()}
+                          {t("chofer_departure")} {new Date(viaje.fecha_salida).toLocaleString()}
                         </p>
 
                         <p className="text-sm text-muted-foreground">
-                          Llegada estimada:{" "}
+                          {t("chofer_arrival")}{" "}
                           {new Date(viaje.fecha_llegada_est).toLocaleString()}
                         </p>
 
                         <p className="text-sm text-muted-foreground">
-                          Bus: {viaje.buses?.placa ?? "No asignado"}{" "}
+                          {t("chofer_bus_label")} {viaje.buses?.placa ?? t("chofer_bus_unassigned")}{" "}
                           {viaje.buses?.numero ? `- Nº ${viaje.buses.numero}` : ""}
                         </p>
 
                         <p className="text-sm text-muted-foreground">
-                          Tipo de bus: {viaje.buses?.tipo ?? "No definido"}
+                          {t("chofer_bus_type")} {viaje.buses?.tipo ?? t("chofer_bus_type_undefined")}
                         </p>
                       </div>
 
@@ -1644,7 +1641,7 @@ export default function ChoferDashboard() {
                         </span>
 
                         <Button variant="outline" disabled>
-                          Ver pasajeros
+                          {t("chofer_see_passengers")}
                         </Button>
                       </div>
                     </div>
@@ -1663,9 +1660,9 @@ export default function ChoferDashboard() {
               </div>
 
               <div>
-                <h2 className="text-xl font-semibold">Validación de asistencia por QR</h2>
+                <h2 className="text-xl font-semibold">{t("chofer_qr_title")}</h2>
                 <p className="text-sm text-muted-foreground">
-                  Ingresa el código QR del boleto para validar el acceso del pasajero al bus.
+                  {t("chofer_qr_desc")}
                 </p>
               </div>
             </div>
@@ -1687,14 +1684,14 @@ export default function ChoferDashboard() {
                   )}
 
                   {iniciandoCamara
-                    ? "Activando cámara..."
+                    ? t("chofer_camera_starting")
                     : camaraActiva
-                    ? "Detener cámara"
-                    : "Activar cámara"}
+                    ? t("chofer_camera_stop")
+                    : t("chofer_camera_start")}
                 </Button>
 
                 <p className="text-sm text-muted-foreground flex items-center">
-                  También puedes escribir o corregir manualmente el código QR.
+                  {t("chofer_camera_manual")}
                </p>
               </div>
 
@@ -1708,7 +1705,7 @@ export default function ChoferDashboard() {
 
             <div className="grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-end">
               <div className="space-y-2">
-                <Label htmlFor="codigoQR">Código QR</Label>
+                <Label htmlFor="codigoQR">{t("chofer_qr_label")}</Label>
                 <Input
                   id="codigoQR"
                   value={codigoQR}
@@ -1723,11 +1720,11 @@ export default function ChoferDashboard() {
                 ) : (
                   <Search className="h-4 w-4 mr-2" />
                 )}
-                Buscar boleto
+                {t("chofer_search_ticket")}
               </Button>
 
               <Button variant="outline" onClick={limpiarBusquedaQR}>
-                Limpiar
+                {t("chofer_clear")}
               </Button>
             </div>
           </Card>
@@ -1736,9 +1733,9 @@ export default function ChoferDashboard() {
             <Card className="p-6 space-y-5">
               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                 <div>
-                  <h3 className="text-lg font-semibold">Resultado del boleto</h3>
+                  <h3 className="text-lg font-semibold">{t("chofer_ticket_result")}</h3>
                   <p className="text-sm text-muted-foreground break-all">
-                    Código: {boletoEncontrado.codigo_qr}
+                    {t("chofer_ticket_code")} {boletoEncontrado.codigo_qr}
                   </p>
                 </div>
 
@@ -1759,11 +1756,11 @@ export default function ChoferDashboard() {
                 <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-yellow-800 flex gap-3">
                   <AlertTriangle className="h-5 w-5 shrink-0" />
                   <div>
-                    <p className="font-medium">Este boleto no puede validarse nuevamente.</p>
+                    <p className="font-medium">{t("chofer_ticket_cannot_validate")}</p>
                     <p className="text-sm">
-                      Estado actual: {boletoEncontrado.estado}
+                      {t("chofer_ticket_state")} {boletoEncontrado.estado}
                       {boletoEncontrado.usado_at
-                        ? ` — usado el ${new Date(
+                        ? ` — ${t("chofer_ticket_used_at")} ${new Date(
                             boletoEncontrado.usado_at
                           ).toLocaleString()}`
                         : ""}
@@ -1777,10 +1774,10 @@ export default function ChoferDashboard() {
                    <div className="rounded-lg border border-orange-300 bg-orange-50 p-4 text-orange-800 flex gap-3">
                       <AlertTriangle className="h-5 w-5 shrink-0" />
                       <div>
-                        <p className="font-medium">La asistencia no puede validarse.</p>
+                        <p className="font-medium">{t("chofer_attendance_cannot")}</p>
                         <p className="text-sm">
                           {obtenerMensajeEstadoReserva(
-                            boletoEncontrado.detalle_reserva?.reservas?.estado
+                            boletoEncontrado.detalle_reserva?.reservas?.estado, t
                          )}
                        </p>
                       </div>
@@ -1789,70 +1786,60 @@ export default function ChoferDashboard() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-3">
-                  <h4 className="font-semibold">Datos del pasajero</h4>
+                  <h4 className="font-semibold">{t("chofer_passenger_data")}</h4>
 
                   <p className="text-sm">
-                    <span className="font-medium">Nombre:</span>{" "}
-                    {boletoEncontrado.detalle_reserva?.reservas?.usuarios?.full_name ??
-                      "No disponible"}
+                    <span className="font-medium">{t("chofer_field_name")}</span>{" "}
+                    {boletoEncontrado.detalle_reserva?.reservas?.usuarios?.full_name ?? t("chofer_field_na")}
                   </p>
 
                   <p className="text-sm">
-                    <span className="font-medium">Cédula:</span>{" "}
-                    {boletoEncontrado.detalle_reserva?.reservas?.usuarios?.cedula ??
-                      "No disponible"}
+                    <span className="font-medium">{t("chofer_field_cedula")}</span>{" "}
+                    {boletoEncontrado.detalle_reserva?.reservas?.usuarios?.cedula ?? t("chofer_field_na")}
                   </p>
 
                   <p className="text-sm">
-                    <span className="font-medium">Teléfono:</span>{" "}
-                    {boletoEncontrado.detalle_reserva?.reservas?.usuarios?.phone ??
-                      "No disponible"}
+                    <span className="font-medium">{t("chofer_field_phone")}</span>{" "}
+                    {boletoEncontrado.detalle_reserva?.reservas?.usuarios?.phone ?? t("chofer_field_na")}
                   </p>
 
                   <p className="text-sm">
-                    <span className="font-medium">Correo:</span>{" "}
-                    {boletoEncontrado.detalle_reserva?.reservas?.usuarios?.email ??
-                      "No disponible"}
+                    <span className="font-medium">{t("chofer_field_email")}</span>{" "}
+                    {boletoEncontrado.detalle_reserva?.reservas?.usuarios?.email ?? t("chofer_field_na")}
                   </p>
                 </div>
 
                 <div className="space-y-3">
-                  <h4 className="font-semibold">Datos del viaje y asiento</h4>
+                  <h4 className="font-semibold">{t("chofer_trip_seat_data")}</h4>
 
                   <p className="text-sm">
-                    <span className="font-medium">Ruta:</span>{" "}
-                    {boletoEncontrado.detalle_reserva?.reservas?.viajes?.rutas
-                      ?.ciudad_origen ?? "Origen"}{" "}
+                    <span className="font-medium">{t("chofer_field_route")}</span>{" "}
+                    {boletoEncontrado.detalle_reserva?.reservas?.viajes?.rutas?.ciudad_origen ?? "Origen"}{" "}
                     →{" "}
-                    {boletoEncontrado.detalle_reserva?.reservas?.viajes?.rutas
-                      ?.ciudad_destino ?? "Destino"}
+                    {boletoEncontrado.detalle_reserva?.reservas?.viajes?.rutas?.ciudad_destino ?? "Destino"}
                   </p>
 
                   <p className="text-sm">
-                    <span className="font-medium">Salida:</span>{" "}
+                    <span className="font-medium">{t("chofer_field_departure")}</span>{" "}
                     {boletoEncontrado.detalle_reserva?.reservas?.viajes?.fecha_salida
-                      ? new Date(
-                          boletoEncontrado.detalle_reserva.reservas.viajes.fecha_salida
-                        ).toLocaleString()
-                      : "No disponible"}
+                      ? new Date(boletoEncontrado.detalle_reserva.reservas.viajes.fecha_salida).toLocaleString()
+                      : t("chofer_field_na")}
                   </p>
 
                   <p className="text-sm">
-                    <span className="font-medium">Asiento:</span>{" "}
+                    <span className="font-medium">{t("chofer_field_seat")}</span>{" "}
                     {boletoEncontrado.detalle_reserva?.asientos?.numero ?? "N/D"} -{" "}
                     {boletoEncontrado.detalle_reserva?.asientos?.tipo ?? "N/D"}
                   </p>
 
                   <p className="text-sm">
-                    <span className="font-medium">Precio:</span> $
-                    {boletoEncontrado.detalle_reserva?.precio_unitario.toFixed(2) ??
-                      "0.00"}
+                    <span className="font-medium">{t("chofer_field_price")}</span> $
+                    {boletoEncontrado.detalle_reserva?.precio_unitario.toFixed(2) ?? "0.00"}
                   </p>
 
                   <p className="text-sm">
-                    <span className="font-medium">Reserva:</span>{" "}
-                    {boletoEncontrado.detalle_reserva?.reservas?.estado ??
-                      "No disponible"}
+                    <span className="font-medium">{t("chofer_field_reservation")}</span>{" "}
+                    {boletoEncontrado.detalle_reserva?.reservas?.estado ?? t("chofer_field_na")}
                   </p>
                 </div>
               </div>
@@ -1871,7 +1858,7 @@ export default function ChoferDashboard() {
                 ) : (
                   <CheckCircle2 className="h-4 w-4 mr-2" />
                 )}
-                Validar asistencia
+                {t("chofer_validate")}
               </Button>
             </Card>
           )}
@@ -1885,15 +1872,15 @@ export default function ChoferDashboard() {
               </div>
 
               <div>
-                <h2 className="text-xl font-semibold">Venta presencial durante el viaje</h2>
+                <h2 className="text-xl font-semibold">{t("chofer_sale_title")}</h2>
                 <p className="text-sm text-muted-foreground">
-                  Registra boletos vendidos por el chofer durante un viaje indirecto en curso.
+                  {t("chofer_sale_desc")}
                 </p>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Viaje asignado</Label>
+              <Label>{t("chofer_sale_trip_label")}</Label>
               <select
                 value={viajeVentaId}
                 onChange={(e) => {
@@ -1906,7 +1893,7 @@ export default function ChoferDashboard() {
                 }}
                 className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
               >
-                <option value="">Selecciona un viaje</option>
+                <option value="">{t("chofer_sale_trip_select")}</option>
                 {viajes.map((viaje) => (
                   <option key={viaje.id} value={viaje.id}>
                     Viaje #{viaje.id} - {viaje.rutas?.ciudad_origen} →{" "}
@@ -1918,34 +1905,34 @@ export default function ChoferDashboard() {
 
             {viajeVenta && (
               <div className="rounded-lg border p-4 space-y-3">
-                <h3 className="font-semibold">Información del viaje</h3>
+                <h3 className="font-semibold">{t("chofer_trip_info")}</h3>
 
                 <div className="grid md:grid-cols-2 gap-3 text-sm">
                   <p>
-                    <span className="font-medium">Ruta:</span>{" "}
+                    <span className="font-medium">{t("chofer_field_route")}</span>{" "}
                     {viajeVenta.rutas?.ciudad_origen} → {viajeVenta.rutas?.ciudad_destino}
                   </p>
 
                   <p>
-                    <span className="font-medium">Estado:</span> {viajeVenta.estado}
+                    <span className="font-medium">{t("chofer_field_status")}</span> {viajeVenta.estado}
                   </p>
 
                   <p>
-                    <span className="font-medium">Tipo:</span> {viajeVenta.tipo_viaje}
+                    <span className="font-medium">{t("chofer_field_type")}</span> {viajeVenta.tipo_viaje}
                   </p>
 
                   <p>
-                    <span className="font-medium">Salida:</span>{" "}
+                    <span className="font-medium">{t("chofer_field_departure")}</span>{" "}
                     {new Date(viajeVenta.fecha_salida).toLocaleString()}
                   </p>
 
                   <p>
-                    <span className="font-medium">Bus:</span>{" "}
-                    {viajeVenta.buses?.placa ?? "No asignado"}
+                    <span className="font-medium">{t("chofer_field_bus")}</span>{" "}
+                    {viajeVenta.buses?.placa ?? t("chofer_bus_unassigned")}
                   </p>
 
                   <p>
-                    <span className="font-medium">Precio base:</span> $
+                    <span className="font-medium">{t("chofer_field_base_price")}</span> $
                     {viajeVenta.precio_base.toFixed(2)}
                   </p>
                 </div>
@@ -1959,7 +1946,7 @@ export default function ChoferDashboard() {
                     }
                   >
                     <PlayCircle className="h-4 w-4 mr-2" />
-                    Empezar viaje
+                    {t("chofer_start_trip")}
                   </Button>
 
                   <Button
@@ -1968,19 +1955,19 @@ export default function ChoferDashboard() {
                     disabled={viajeVenta.estado !== "en_curso"}
                   >
                     <StopCircle className="h-4 w-4 mr-2" />
-                    Terminar viaje
+                    {t("chofer_end_trip")}
                   </Button>
                 </div>
 
                 {viajeVenta.estado !== "en_curso" && (
                   <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
-                    Para vender boletos, el viaje debe estar en curso.
+                    {t("chofer_need_in_progress")}
                   </div>
                 )}
 
                 {viajeVenta.estado === "en_curso" && viajeVenta.tipo_viaje === "directo" && (
                   <div className="rounded-lg border border-orange-300 bg-orange-50 p-3 text-sm text-orange-800">
-                    Este viaje es directo. No se permite venta presencial durante el recorrido.
+                    {t("chofer_direct_no_sale")}
                   </div>
                 )}
               </div>
@@ -1992,15 +1979,15 @@ export default function ChoferDashboard() {
             viajeVenta.tipo_viaje === "indirecto" && (
               <>
                 <Card className="p-6 space-y-5">
-                  <h3 className="text-lg font-semibold">Datos de la venta</h3>
+                  <h3 className="text-lg font-semibold">{t("chofer_sale_data_title")}</h3>
 
                   <div className="grid md:grid-cols-[1fr_auto] gap-3 md:items-end">
                     <div className="space-y-2">
-                      <Label>Cédula del comprador</Label>
+                      <Label>{t("chofer_buyer_cedula")}</Label>
                       <Input
                         value={cedulaComprador}
                         onChange={(e) => setCedulaComprador(e.target.value)}
-                        placeholder="Ingrese la cédula del comprador"
+                        placeholder={t("chofer_buyer_placeholder")}
                       />
                     </div>
 
@@ -2010,36 +1997,36 @@ export default function ChoferDashboard() {
                       ) : (
                         <UserSearch className="h-4 w-4 mr-2" />
                       )}
-                      Buscar comprador
+                      {t("chofer_search_buyer")}
                     </Button>
                   </div>
 
                   {comprador && (
                     <div className="rounded-lg border bg-muted/30 p-4 text-sm space-y-1">
                       <p>
-                        <span className="font-medium">Comprador:</span> {comprador.full_name}
+                        <span className="font-medium">{t("chofer_buyer_label")}</span> {comprador.full_name}
                       </p>
                       <p>
-                        <span className="font-medium">Cédula:</span> {comprador.cedula}
+                        <span className="font-medium">{t("chofer_field_cedula")}</span> {comprador.cedula}
                       </p>
                       <p>
-                        <span className="font-medium">Teléfono:</span> {comprador.phone}
+                        <span className="font-medium">{t("chofer_field_phone")}</span> {comprador.phone}
                       </p>
                       <p>
-                        <span className="font-medium">Correo:</span> {comprador.email}
+                        <span className="font-medium">{t("chofer_field_email")}</span> {comprador.email}
                       </p>
                     </div>
                   )}
 
                   <div className="grid md:grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label>Ciudad / parada</Label>
+                      <Label>{t("chofer_city_label")}</Label>
                       <select
                         value={ciudadParadaId}
                         onChange={(e) => setCiudadParadaId(e.target.value)}
                         className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
                       >
-                        <option value="">Selecciona una ciudad</option>
+                        <option value="">{t("chofer_city_select")}</option>
                         {ciudadesParadas.map((ciudad) => (
                           <option key={ciudad.id} value={ciudad.id}>
                             {ciudad.nombre}
@@ -2050,11 +2037,11 @@ export default function ChoferDashboard() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Observación</Label>
+                      <Label>{t("chofer_obs_label")}</Label>
                       <Input
                         value={observacionVenta}
                         onChange={(e) => setObservacionVenta(e.target.value)}
-                        placeholder="Ejemplo: Saliendo de la ciudad"
+                        placeholder={t("chofer_obs_placeholder")}
                       />
                     </div>
                   </div>
@@ -2063,17 +2050,17 @@ export default function ChoferDashboard() {
                 <Card className="p-6 space-y-5">
                   <div className="flex items-center gap-2">
                     <Armchair className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-semibold">Asientos disponibles</h3>
+                    <h3 className="text-lg font-semibold">{t("chofer_seats_title")}</h3>
                   </div>
 
                   {cargandoAsientos ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Cargando asientos...
+                      {t("chofer_seats_loading")}
                     </div>
                   ) : asientosDisponibles.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
-                      No existen asientos disponibles para este viaje.
+                      {t("chofer_seats_empty")}
                     </p>
                   ) : (
                     <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
@@ -2100,7 +2087,7 @@ export default function ChoferDashboard() {
 
                 {asientosSeleccionados.length > 0 && (
                   <Card className="p-6 space-y-5">
-                    <h3 className="text-lg font-semibold">Ocupantes por asiento</h3>
+                    <h3 className="text-lg font-semibold">{t("chofer_occupants_title")}</h3>
 
                     <div className="space-y-4">
                       {asientosSeleccionados.map((item) => {
@@ -2110,7 +2097,7 @@ export default function ChoferDashboard() {
                           <div key={item.asiento.id} className="rounded-lg border p-4 space-y-3">
                             <div className="flex items-center justify-between">
                               <h4 className="font-semibold">
-                                Asiento {item.asiento.numero} - {item.asiento.tipo}
+                                {t("chofer_seat_label")} {item.asiento.numero} - {item.asiento.tipo}
                               </h4>
 
                               <Button
@@ -2119,19 +2106,19 @@ export default function ChoferDashboard() {
                                 onClick={() => seleccionarAsientoVenta(item.asiento)}
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
-                                Quitar
+                                {t("chofer_remove")}
                               </Button>
                             </div>
 
                             <div className="grid md:grid-cols-[1fr_auto] gap-3 md:items-end">
                               <div className="space-y-2">
-                                <Label>Cédula del ocupante</Label>
+                                <Label>{t("chofer_occupant_cedula")}</Label>
                                 <Input
                                   value={item.cedulaOcupante}
                                   onChange={(e) =>
                                     actualizarCedulaOcupante(item.asiento.id, e.target.value)
                                   }
-                                  placeholder="Cédula de quien ocupará el asiento"
+                                  placeholder={t("chofer_occupant_placeholder")}
                                 />
                               </div>
 
@@ -2139,26 +2126,26 @@ export default function ChoferDashboard() {
                                 variant="outline"
                                 onClick={() => buscarOcupanteAsiento(item.asiento.id)}
                               >
-                                Buscar ocupante
+                                {t("chofer_search_occupant")}
                               </Button>
                             </div>
 
                             {item.ocupante && (
                               <div className="text-sm rounded-lg bg-muted/30 p-3 space-y-1">
                                 <p>
-                                  <span className="font-medium">Ocupante:</span>{" "}
+                                  <span className="font-medium">{t("chofer_occupant_label")}</span>{" "}
                                   {item.ocupante.full_name}
                                 </p>
                                 <p>
-                                  <span className="font-medium">Cédula:</span>{" "}
+                                  <span className="font-medium">{t("chofer_field_cedula")}</span>{" "}
                                   {item.ocupante.cedula}
                                 </p>
                                 <p>
-                                  <span className="font-medium">Edad:</span>{" "}
-                                  {calcularEdad(item.ocupante.fecha_nacimiento) ?? "No registrada"}
+                                  <span className="font-medium">{t("chofer_field_age")}</span>{" "}
+                                  {calcularEdad(item.ocupante.fecha_nacimiento) ?? t("chofer_age_not_registered")}
                                 </p>
                                 <p>
-                                  <span className="font-medium">Discapacidad:</span>{" "}
+                                  <span className="font-medium">{t("chofer_disability")}</span>{" "}
                                   {item.ocupante.tiene_discapacidad ? "Sí" : "No"}
                                 </p>
                               </div>
@@ -2166,7 +2153,7 @@ export default function ChoferDashboard() {
 
                             <div className="grid md:grid-cols-2 gap-3">
                               <div className="space-y-2">
-                                <Label>Descuento</Label>
+                                <Label>{t("chofer_discount_label")}</Label>
                                 <select
                                   value={item.tipo_descuento}
                                   onChange={(e) =>
@@ -2181,30 +2168,30 @@ export default function ChoferDashboard() {
                                   }
                                   className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
                                 >
-                                  <option value="ninguno">Ninguno</option>
+                                  <option value="ninguno">{t("chofer_discount_none")}</option>
                                   <option
                                     value="menor"
                                     disabled={!descuentosPermitidos.includes("menor")}
                                   >
-                                    Menor
+                                    {t("chofer_discount_minor")}
                                   </option>
                                   <option
                                     value="tercera_edad"
                                     disabled={!descuentosPermitidos.includes("tercera_edad")}
                                   >
-                                    Tercera edad
+                                    {t("chofer_discount_elderly")}
                                   </option>
                                   <option
                                     value="discapacidad"
                                     disabled={!descuentosPermitidos.includes("discapacidad")}
                                   >
-                                    Discapacidad
+                                    {t("chofer_discount_disability")}
                                   </option>
                                 </select>
                               </div>
 
                               <div className="space-y-2">
-                                <Label>Precio asiento</Label>
+                                <Label>{t("chofer_seat_price")}</Label>
                                 <Input value={`$${item.precio_unitario.toFixed(2)}`} readOnly />
                               </div>
                             </div>
@@ -2216,16 +2203,16 @@ export default function ChoferDashboard() {
                 )}
 
                 <Card className="p-6 space-y-5">
-                  <h3 className="text-lg font-semibold">Pago en efectivo</h3>
+                  <h3 className="text-lg font-semibold">{t("chofer_payment_title")}</h3>
 
                   <div className="grid md:grid-cols-3 gap-3">
                     <div className="space-y-2">
-                      <Label>Total a pagar</Label>
+                      <Label>{t("chofer_total_pay")}</Label>
                       <Input value={`$${totalVenta.toFixed(2)}`} readOnly />
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Efectivo recibido</Label>
+                      <Label>{t("chofer_cash_received")}</Label>
                       <Input
                         type="number"
                         step="0.01"
@@ -2236,7 +2223,7 @@ export default function ChoferDashboard() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Cambio</Label>
+                      <Label>{t("chofer_change")}</Label>
                       <Input
                         value={efectivoNumero >= totalVenta ? `$${cambioVenta.toFixed(2)}` : "$0.00"}
                         readOnly
@@ -2254,35 +2241,35 @@ export default function ChoferDashboard() {
                     ) : (
                       <CheckCircle2 className="h-4 w-4 mr-2" />
                     )}
-                    Validar venta presencial
+                    {t("chofer_confirm_sale")}
                   </Button>
                 </Card>
 
                 {ventaExitosa && (
                   <Card className="p-6 space-y-4">
-                    <h3 className="text-lg font-semibold">Venta registrada correctamente</h3>
+                    <h3 className="text-lg font-semibold">{t("chofer_sale_success_title")}</h3>
 
                     <p className="text-sm">
-                      <span className="font-medium">Reserva:</span> #{ventaExitosa.reservaId}
+                      <span className="font-medium">{t("chofer_sale_reservation")}</span> #{ventaExitosa.reservaId}
                     </p>
 
                     <p className="text-sm">
-                      <span className="font-medium">Total:</span> ${ventaExitosa.total.toFixed(2)}
+                      <span className="font-medium">{t("chofer_sale_total")}</span> ${ventaExitosa.total.toFixed(2)}
                     </p>
 
                     <div className="space-y-2">
-                      <h4 className="font-semibold">Boletos generados y registrados como usados</h4>
+                      <h4 className="font-semibold">{t("chofer_tickets_generated")}</h4>
 
                       {ventaExitosa.boletos.map((boleto) => (
                         <div key={boleto.codigo_qr} className="rounded-lg border p-3 text-sm">
                           <p>
-                            <span className="font-medium">Pasajero:</span> {boleto.pasajero}
+                            <span className="font-medium">{t("chofer_ticket_passenger")}</span> {boleto.pasajero}
                           </p>
                           <p>
-                            <span className="font-medium">Asiento:</span> {boleto.asiento}
+                            <span className="font-medium">{t("chofer_ticket_seat")}</span> {boleto.asiento}
                           </p>
                           <p className="break-all">
-                            <span className="font-medium">QR:</span> {boleto.codigo_qr}
+                            <span className="font-medium">{t("chofer_ticket_qr")}</span> {boleto.codigo_qr}
                           </p>
                        </div>
                       ))}

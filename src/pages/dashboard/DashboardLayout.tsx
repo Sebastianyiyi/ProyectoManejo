@@ -1,22 +1,25 @@
-import { Navigate, NavLink, Outlet } from "react-router-dom";
+import { Navigate, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Bus, LayoutDashboard, Map, Users, Ticket, LogOut } from "lucide-react";
+import { useLang } from "@/contexts/LanguageContext";
+import { Bus, LayoutDashboard, Map, Users, Ticket, LogOut, Building2, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const NAV = [
-  { to: "/dashboard", label: "Inicio", icon: LayoutDashboard, end: true },
-  { to: "/dashboard/buses", label: "Buses", icon: Bus },
-  { to: "/dashboard/rutas", label: "Rutas", icon: Map },
-  { to: "/dashboard/usuarios", label: "Usuarios", icon: Users },
-  { to: "/dashboard/boletos", label: "Boletos", icon: Ticket },
-];
 
 export default function DashboardLayout() {
   const { user, loading, signOut, hasRole } = useAuth();
+  const { t } = useLang();
+  const navigate = useNavigate();
 
-  if (loading) return <div className="flex h-screen items-center justify-center">Cargando...</div>;
+  const NAV = [
+    { to: "/dashboard",             label: t("dash_home"),        icon: LayoutDashboard, end: true },
+    { to: "/dashboard/cooperativa", label: t("dash_cooperative"), icon: Building2 },
+    { to: "/dashboard/buses",       label: t("dash_buses"),       icon: Bus },
+    { to: "/dashboard/rutas",       label: t("dash_routes"),      icon: Map },
+    { to: "/dashboard/usuarios",    label: t("dash_users"),       icon: Users },
+    { to: "/dashboard/boletos",     label: t("dash_tickets"),     icon: Ticket },
+  ];
 
-  // Solo redirigir si YA terminó de cargar y no tiene rol
+  if (loading) return <div className="flex h-screen items-center justify-center">{t("dash_welcome")}...</div>;
+
   if (!loading && (!user || (!hasRole("administrador") && !hasRole("oficinista")))) {
     return <Navigate to="/" replace />;
   }
@@ -26,7 +29,7 @@ export default function DashboardLayout() {
       {/* Sidebar */}
       <aside className="w-56 border-r flex flex-col bg-muted/20">
         <div className="p-4 border-b">
-          <p className="font-bold text-sm">Panel de gestión</p>
+          <p className="font-bold text-sm">{t("dash_panel")}</p>
           <p className="text-xs text-muted-foreground truncate">{user.name}</p>
           <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full capitalize">
             {user.role}
@@ -52,14 +55,22 @@ export default function DashboardLayout() {
           ))}
         </nav>
 
-        <div className="p-3 border-t">
+        <div className="p-3 border-t space-y-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-2 text-muted-foreground"
+            onClick={() => navigate("/configuracion")}
+          >
+            <Settings size={16} /> {t("nav_settings")}
+          </Button>
           <Button
             variant="ghost"
             size="sm"
             className="w-full justify-start gap-2 text-muted-foreground"
             onClick={signOut}
           >
-            <LogOut size={16} /> Cerrar sesión
+            <LogOut size={16} /> {t("nav_logout")}
           </Button>
         </div>
       </aside>
