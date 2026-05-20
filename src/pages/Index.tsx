@@ -18,17 +18,18 @@ export default function Index() {
         return <Navigate to="/dashboard" replace />;
     }
 
-    const handleSearch = () => {
-        console.log({ origen, destino, fecha });
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (!origen || !destino || !fecha) {
             alert("Completa todos los campos para buscar");
             return;
         }
+
         const params = new URLSearchParams({ origen, destino, fecha });
         navigate(`/buscar?${params.toString()}`);
     };
+    
     return (
         <>
             {/* SECCIÓN HERO (Persona 4) */}
@@ -110,7 +111,7 @@ export default function Index() {
                         {/* Botón Buscar */}
                         <div className="flex items-end">
                             <Button
-                                type="submit" 
+                                type="submit"
                                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                                 size="lg"
                             >

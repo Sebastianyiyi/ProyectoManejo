@@ -37,22 +37,14 @@ export default function Auth() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && user) {
-      if (user.role === "administrador" || user.role === "oficinista") {
-        navigate("/dashboard", { replace: true });
     if (user && !authLoading) {
       if (user.role === "chofer") {
         navigate("/chofer", { replace: true });
         return;
       }
 
-      if (user.role === "administrador") {
-        navigate("/", { replace: true });
-        return;
-      }
-
-      if (user.role === "oficinista") {
-        navigate("/", { replace: true });
+      if (user.role === "administrador" || user.role === "oficinista") {
+        navigate("/dashboard", { replace: true });
         return;
       }
 

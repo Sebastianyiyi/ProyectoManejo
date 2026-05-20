@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -18,23 +19,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-async function fetchUserWithRole(su: SupabaseUser): Promise<User> {
-  const { data } = await supabase
-    .from("usuarios")
-    .select("full_name, rol")
-    .eq("email", su.email)
-    .single();
-
-  return {
-    name: data?.full_name ?? su.user_metadata?.full_name ?? su.email ?? "",
-    email: su.email ?? "",
-    role: data?.rol ?? "passenger",
 async function getUsuarioFromDatabase(supabaseUser: SupabaseUser): Promise<AppUser> {
   const email = supabaseUser.email ?? "";
 
   const { data, error } = await supabase
     .from("usuarios")
-    .select("id, full_name, email, rol, activo")
+    .select("id, full_name, email, rol")
     .eq("email", email)
     .maybeSingle();
 
@@ -50,126 +40,39 @@ async function getUsuarioFromDatabase(supabaseUser: SupabaseUser): Promise<AppUs
   };
 }
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  // loading empieza en true y solo se pone false cuando TODO está listo
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let ignore = false;
-
-    async function init() {
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (session?.user && !ignore) {
-        try {
-          const u = await fetchUserWithRole(session.user);
-          if (!ignore) setUser(u);
-        } catch {
-          if (!ignore) setUser({
-            name: session.user.user_metadata?.full_name ?? session.user.email ?? "",
-            email: session.user.email ?? "",
-            role: "passenger",
-          });
-        }
-      }
-
-      if (!ignore) setLoading(false);
-    }
-
-    init();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (session?.user) {
-          fetchUserWithRole(session.user)
-            .then((u) => {
-              setUser(u);
-            })
-            .catch(() => {
-              setUser({
-                name: session.user!.user_metadata?.full_name ?? session.user!.email ?? "",
-                email: session.user!.email ?? "",
-                role: "passenger",
-              });
-            })
-            .finally(() => {
-              setLoading(false);
-            });
-        } else {
-          setUser(null);
-          setLoading(false);
-        }
-      }
-    );
-
-    return () => {
-      ignore = true;
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
 
-    const loadUser = async () => {
-      try {
-        setLoading(true);
-
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-
-        if (error) {
-          console.error("Error obteniendo sesión:", error);
-          if (mounted) setUser(null);
-          return;
-        }
-
-        if (!session?.user) {
-          if (mounted) setUser(null);
-          return;
-        }
-
-        const appUser = await getUsuarioFromDatabase(session.user);
-
-        if (mounted) {
-          setUser(appUser);
-        }
-      } catch (error) {
-        console.error("Error general en AuthContext:", error);
-        if (mounted) setUser(null);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    loadUser();
-
+    // Escucha todos los cambios de sesión (incluyendo la carga inicial)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      const handleAuthChange = async () => {
+      if (!session?.user) {
+        if (mounted) {
+          setUser(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      // Usamos setTimeout(0) para evitar el deadlock con async en onAuthStateChange
+      setTimeout(async () => {
         try {
-          if (!session?.user) {
-            if (mounted) setUser(null);
-            return;
-          }
-
           const appUser = await getUsuarioFromDatabase(session.user);
-
           if (mounted) {
             setUser(appUser);
           }
-        } catch (error) {
-          console.error("Error en cambio de sesión:", error);
+        } catch (err) {
+          console.error("Error cargando usuario:", err);
           if (mounted) setUser(null);
         } finally {
           if (mounted) setLoading(false);
         }
-      };
-
-      handleAuthChange();
+      }, 0);
     });
 
     return () => {
@@ -183,9 +86,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
-  const hasRole = (...roles: string[]) => roles.includes(user?.role ?? "");
-  const hasRole = (role: string) => {
-    return user?.role === role;
+  const hasRole = (...roles: string[]) => {
+    return roles.includes(user?.role ?? "");
   };
 
   return (
@@ -196,14 +98,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
   const context = useContext(AuthContext);
-
   if (!context) {
     throw new Error("useAuth debe usarse dentro de AuthProvider");
   }
-
   return context;
 }
