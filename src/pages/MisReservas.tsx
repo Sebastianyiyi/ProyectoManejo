@@ -10,7 +10,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
 const ESTADO_LABEL: Record<string, { text: string; variant: "outline" | "secondary" | "default" | "destructive" }> = {
-  pendiente_pago:       { text: "Pendiente de pago", variant: "outline" },
+  pendiente_pago: { text: "Pendiente de aprobación", variant: "outline" },
   pendiente_validacion: { text: "Validando pago",     variant: "secondary" },
   confirmada:           { text: "Confirmada",         variant: "default" },
   rechazada:            { text: "Rechazada",          variant: "destructive" },
@@ -103,14 +103,14 @@ export default function MisReservas() {
                       ${Number(r.precio_total).toFixed(2)}
                     </div>
                     {r.estado === "confirmada" ? (
-                      <Button asChild size="sm">
-                        <Link to={`/boleto/${r.id}`}>Ver boleto</Link>
-                      </Button>
-                    ) : (
-                      <Button asChild size="sm" variant="outline">
-                        <Link to={`/boleto/${r.id}`}>Ver detalle</Link>
-                      </Button>
-                    )}
+                        <Button asChild size="sm">
+                          <Link to={`/boleto/${r.id}`}>Ver boleto</Link>
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="outline" disabled>
+                          En espera
+                        </Button>
+                      )}
                   </div>
                 </div>
                 {r.estado === "rechazada" && r.motivo_rechazo && (
