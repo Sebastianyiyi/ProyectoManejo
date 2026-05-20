@@ -25,9 +25,11 @@ export function Layout() {
 
   const navLinks = (
     <>
-      <NavLink to="/buscar" className={({ isActive }) =>
-        `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-foreground/70 hover:text-foreground'}`
-      }>{t("nav_search")}</NavLink>
+      {!isAdmin && !isOficinista && (
+        <NavLink to="/buscar" className={({ isActive }) =>
+          `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-foreground/70 hover:text-foreground'}`
+        }>{t("nav_search")}</NavLink>
+      )}
 
       {user && !isAdmin && !isOficinista && (
         <NavLink to="/mis-reservas" className={({ isActive }) =>

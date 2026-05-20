@@ -144,6 +144,10 @@ const T = {
     auth_err_name: "Mínimo 3 caracteres",
     auth_err_cedula: "Cédula ecuatoriana inválida",
     auth_err_phone: "Teléfono inválido",
+    auth_forgot: "¿Olvidaste tu contraseña?",
+    auth_forgot_sent: "Revisa tu correo para restablecer tu contraseña.",
+    auth_forgot_error: "No se pudo enviar el correo de recuperación.",
+    auth_forgot_no_email: "Ingresa tu correo primero.",
     // Perfil
     perfil_title: "Editar perfil",
     perfil_back: "Volver",
@@ -487,6 +491,10 @@ const T = {
     auth_err_name: "Minimum 3 characters",
     auth_err_cedula: "Invalid Ecuadorian ID",
     auth_err_phone: "Invalid phone",
+    auth_forgot: "Forgot your password?",
+    auth_forgot_sent: "Check your email to reset your password.",
+    auth_forgot_error: "Could not send the recovery email.",
+    auth_forgot_no_email: "Enter your email first.",
     // Perfil
     perfil_title: "Edit profile",
     perfil_back: "Back",

@@ -24,6 +24,7 @@ export default function Auth() {
   const { user, loading: authLoading } = useAuth();
   const { t } = useLang();
   const [submitting, setSubmitting] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
 
   const signInSchema = z.object({
     email: z.string().trim().email(t("auth_err_email")).max(255),
@@ -60,6 +61,24 @@ export default function Auth() {
     resolver: zodResolver(signUpSchema),
     defaultValues: { full_name: "", cedula: "", phone: "", email: "", password: "" },
   });
+
+  const onForgotPassword = async () => {
+    const email = signIn.getValues("email").trim();
+    if (!email) {
+      toast.error(t("auth_forgot_no_email"));
+      return;
+    }
+    setSendingReset(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setSendingReset(false);
+    if (error) {
+      toast.error(t("auth_forgot_error"));
+      return;
+    }
+    toast.success(t("auth_forgot_sent"));
+  };
 
   const onSignIn = async (values: z.infer<typeof signInSchema>) => {
     setSubmitting(true);
@@ -115,7 +134,18 @@ export default function Auth() {
                 {signIn.formState.errors.email && <p className="text-xs text-destructive">{signIn.formState.errors.email.message}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="si-password">{t("auth_password")}</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="si-password">{t("auth_password")}</Label>
+                  <button
+                    type="button"
+                    onClick={onForgotPassword}
+                    disabled={sendingReset}
+                    className="text-xs text-primary hover:underline disabled:opacity-50 flex items-center gap-1"
+                  >
+                    {sendingReset && <Loader2 className="h-3 w-3 animate-spin" />}
+                    {t("auth_forgot")}
+                  </button>
+                </div>
                 <Input id="si-password" type="password" {...signIn.register("password")} />
                 {signIn.formState.errors.password && <p className="text-xs text-destructive">{signIn.formState.errors.password.message}</p>}
               </div>
