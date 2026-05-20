@@ -123,8 +123,8 @@ export function Layout() {
       {/* FOOTER */}
       <footer className="border-t border-border/60 bg-card mt-12">
         <div className="container py-8 text-sm text-muted-foreground flex flex-col md:flex-row justify-between gap-4">
-          <p>© {new Date().getFullYear()} BusEcuador — Sistema de venta de boletos.</p>
-          <p>Hecho para cooperativas de transporte del Ecuador.</p>
+          <p>© {new Date().getFullYear()} BusEcuador — {t("footer_rights")}</p>
+          <p>{t("footer_made_for")}</p>
         </div>
       </footer>
     </div>
