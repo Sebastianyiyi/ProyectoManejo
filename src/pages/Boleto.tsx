@@ -28,14 +28,15 @@ export default function Boleto() {
             buses (placa, tipo, cooperativas (nombre))
           )
         `)
-        .eq("codigo", codigo!)
+        // ✅ CORRECCIÓN: busca por id en lugar de codigo
+        .eq("id", codigo!)
         .maybeSingle();
 
       setReserva(data);
 
       if (data) {
         const url = await QRCode.toDataURL(
-          `BUSEC|${data.codigo}|${data.id}`,
+          `BUSEC|${data.id}`,
           { width: 320, margin: 1 }
         );
         setQrDataUrl(url);
@@ -59,19 +60,19 @@ export default function Boleto() {
     doc.setTextColor(20, 20, 20);
     doc.setFontSize(10);
     let y = 35;
-    doc.text(`Código: ${reserva.codigo}`, 10, y); y += 7;
+    doc.text(`Reserva #${reserva.id}`, 10, y); y += 7;
     doc.text(`Cooperativa: ${v?.buses?.cooperativas?.nombre ?? ""}`, 10, y); y += 6;
     doc.text(`${v?.rutas?.ciudad_origen} → ${v?.rutas?.ciudad_destino}`, 10, y); y += 6;
     doc.text(`Fecha: ${format(fechaSalida, "dd/MM/yyyy", { locale: es })}`, 10, y); y += 6;
     doc.text(`Hora: ${fechaSalida.toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" })}`, 10, y); y += 6;
     doc.text(`Placa: ${v?.buses?.placa ?? ""}`, 10, y); y += 8;
-    doc.text(`Total pagado: $${Number(reserva.total).toFixed(2)}`, 10, y);
+    doc.text(`Total pagado: $${Number(reserva.precio_total).toFixed(2)}`, 10, y);
 
     doc.addImage(qrDataUrl, "PNG", 95, 35, 45, 45);
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
     doc.text("Presenta este código al abordar", 95, 84);
-    doc.save(`boleto-${reserva.codigo}.pdf`);
+    doc.save(`boleto-${reserva.id}.pdf`);
   };
 
   if (loading) return (
@@ -138,8 +139,8 @@ export default function Boleto() {
         <div className="p-6 grid md:grid-cols-[1fr_auto] gap-6">
           <div className="space-y-4">
             <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Código</p>
-              <p className="font-mono text-2xl font-bold">{reserva.codigo}</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Reserva</p>
+              <p className="font-mono text-2xl font-bold">#{reserva.id}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -152,7 +153,7 @@ export default function Boleto() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Total pagado</p>
-                <p className="font-medium text-primary">${Number(reserva.total).toFixed(2)}</p>
+                <p className="font-medium text-primary">${Number(reserva.precio_total).toFixed(2)}</p>
               </div>
             </div>
           </div>

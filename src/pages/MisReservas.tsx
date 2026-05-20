@@ -10,12 +10,12 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
 const ESTADO_LABEL: Record<string, { text: string; variant: "outline" | "secondary" | "default" | "destructive" }> = {
-  pendiente_pago:       { text: "Pendiente de pago",  variant: "outline" },
-  pendiente_validacion: { text: "Validando pago",      variant: "secondary" },
-  confirmada:           { text: "Confirmada",          variant: "default" },
-  rechazada:            { text: "Rechazada",           variant: "destructive" },
-  cancelada:            { text: "Cancelada",           variant: "outline" },
-  expirada:             { text: "Expirada",            variant: "outline" },
+  pendiente_pago:       { text: "Pendiente de pago", variant: "outline" },
+  pendiente_validacion: { text: "Validando pago",     variant: "secondary" },
+  confirmada:           { text: "Confirmada",         variant: "default" },
+  rechazada:            { text: "Rechazada",          variant: "destructive" },
+  cancelada:            { text: "Cancelada",          variant: "outline" },
+  expirada:             { text: "Expirada",           variant: "outline" },
 };
 
 export default function MisReservas() {
@@ -24,7 +24,7 @@ export default function MisReservas() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
     (async () => {
       const { data } = await supabase
         .from("reservas")
@@ -33,7 +33,7 @@ export default function MisReservas() {
           viajes (
             fecha_salida, fecha_llegada_est, precio_base,
             rutas (ciudad_origen, ciudad_destino),
-            buses (placa, cooperativas (nombre))
+            buses (placa, tipo, cooperativas (nombre))
           )
         `)
         .eq("usuario_id", user.id)
@@ -57,14 +57,19 @@ export default function MisReservas() {
         <Card className="p-12 text-center">
           <Ticket className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
           <h3 className="font-semibold mb-1">Aún no tienes reservas</h3>
-          <p className="text-sm text-muted-foreground mb-4">Empieza buscando tu próximo viaje.</p>
-          <Button asChild><Link to="/buscar">Buscar viajes</Link></Button>
+          <p className="text-sm text-muted-foreground mb-4">
+            Empieza buscando tu próximo viaje.
+          </p>
+          <Button asChild>
+            <Link to="/buscar">Buscar viajes</Link>
+          </Button>
         </Card>
       ) : (
         <div className="space-y-3">
           {reservas.map((r) => {
-            const est = ESTADO_LABEL[r.estado] ?? { text: r.estado, variant: "outline" };
+            const est = ESTADO_LABEL[r.estado] ?? { text: r.estado, variant: "outline" as const };
             const v = r.viajes;
+            const fechaSalida = v?.fecha_salida ? new Date(v.fecha_salida) : null;
             return (
               <Card key={r.id} className="p-5">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -72,7 +77,7 @@ export default function MisReservas() {
                     <div className="flex items-center gap-2 mb-1">
                       <Badge variant={est.variant}>{est.text}</Badge>
                       <span className="text-xs text-muted-foreground">
-                        Código: <strong>{r.codigo}</strong>
+                        Reserva #<strong>{r.id}</strong>
                       </span>
                     </div>
                     <div className="font-semibold flex items-center gap-2">
@@ -80,31 +85,30 @@ export default function MisReservas() {
                       <ArrowRight className="h-4 w-4 text-muted-foreground" />
                       {v?.rutas?.ciudad_destino}
                     </div>
-                    <div className="text-sm text-muted-foreground flex items-center gap-3 mt-0.5">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {v?.fecha_salida
-                          ? format(new Date(v.fecha_salida), "dd MMM yyyy", { locale: es })
-                          : "—"}
-                      </span>
-                      <span>· {v?.fecha_salida
-                        ? new Date(v.fecha_salida).toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" })
-                        : "—"}
-                      </span>
+                    <div className="text-sm text-muted-foreground flex items-center gap-3 mt-0.5 flex-wrap">
+                      {fechaSalida && (
+                        <>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {format(fechaSalida, "dd MMM yyyy", { locale: es })}
+                          </span>
+                          <span>· {fechaSalida.toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" })}</span>
+                        </>
+                      )}
                       <span>· {v?.buses?.cooperativas?.nombre}</span>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="text-xl font-bold text-primary mb-2">
-                      ${Number(r.total).toFixed(2)}
+                      ${Number(r.precio_total).toFixed(2)}
                     </div>
                     {r.estado === "confirmada" ? (
                       <Button asChild size="sm">
-                        <Link to={`/boleto/${r.codigo}`}>Ver boleto</Link>
+                        <Link to={`/boleto/${r.id}`}>Ver boleto</Link>
                       </Button>
                     ) : (
                       <Button asChild size="sm" variant="outline">
-                        <Link to={`/boleto/${r.codigo}`}>Ver detalle</Link>
+                        <Link to={`/boleto/${r.id}`}>Ver detalle</Link>
                       </Button>
                     )}
                   </div>
