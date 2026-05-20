@@ -43,13 +43,8 @@ export default function Auth() {
         return;
       }
 
-      if (user.role === "administrador") {
-        navigate("/", { replace: true });
-        return;
-      }
-
-      if (user.role === "oficinista") {
-        navigate("/", { replace: true });
+      if (user.role === "administrador" || user.role === "oficinista") {
+        navigate("/dashboard", { replace: true });
         return;
       }
 

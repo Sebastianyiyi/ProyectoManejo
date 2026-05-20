@@ -1,5 +1,6 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Navigate, Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Bus, MapPin, ShieldCheck, QrCode, CreditCard, Users, MapIcon, CalendarIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,20 +8,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function Index() {
+    const { user, loading } = useAuth();
     const navigate = useNavigate();
     const [origen, setOrigen] = useState("");
     const [destino, setDestino] = useState("");
     const [fecha, setFecha] = useState("");
 
+    if (!loading && user && (user.role === "administrador" || user.role === "oficinista")) {
+        return <Navigate to="/dashboard" replace />;
+    }
+
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (!origen || !destino || !fecha) {
             alert("Completa todos los campos para buscar");
             return;
         }
+
         const params = new URLSearchParams({ origen, destino, fecha });
         navigate(`/buscar?${params.toString()}`);
     };
+    
     return (
         <>
             {/* SECCIÓN HERO (Persona 4) */}
@@ -102,7 +111,7 @@ export default function Index() {
                         {/* Botón Buscar */}
                         <div className="flex items-end">
                             <Button
-                                type="submit" 
+                                type="submit"
                                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
                                 size="lg"
                             >

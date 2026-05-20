@@ -10,11 +10,21 @@ import Auth from "./pages/Auth";
 import Buscar from "./pages/Buscar";
 import ChoferDashboard from "./pages/ChoferDashboard";
 import { Layout } from "./components/ui/Layout";
+import DashboardLayout from "./pages/dashboard/DashboardLayout";
+import BusesPage from "./pages/dashboard/BusesPage";
 
 const PaginaCompra = lazy(() => import("./pages/PaginaCompra"));
 const NotFound = () => <div className="p-8 text-2xl font-bold">404 — Página no encontrada</div>;
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -35,6 +45,14 @@ const App = () => (
                 </Suspense>
               } />
               <Route path="*" element={<NotFound />} />
+            </Route>
+            <Route path="/dashboard" element={<DashboardLayout />}>
+              <Route index element={
+                <div className="p-6">
+                  <h1 className="text-2xl font-bold">Bienvenido al panel</h1>
+                </div>
+              } />
+              <Route path="buses" element={<BusesPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

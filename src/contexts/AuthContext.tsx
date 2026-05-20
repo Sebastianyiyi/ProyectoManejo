@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -13,7 +14,7 @@ interface AuthContextType {
   user: AppUser | null;
   loading: boolean;
   signOut: () => Promise<void>;
-  hasRole: (role: string) => boolean;
+  hasRole: (...roles: string[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -23,7 +24,7 @@ async function getUsuarioFromDatabase(supabaseUser: SupabaseUser): Promise<AppUs
 
   const { data, error } = await supabase
     .from("usuarios")
-    .select("id, full_name, email, rol, activo")
+    .select("id, full_name, email, rol")
     .eq("email", email)
     .maybeSingle();
 
@@ -39,72 +40,39 @@ async function getUsuarioFromDatabase(supabaseUser: SupabaseUser): Promise<AppUs
   };
 }
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
 
-    const loadUser = async () => {
-      try {
-        setLoading(true);
-
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-
-        if (error) {
-          console.error("Error obteniendo sesión:", error);
-          if (mounted) setUser(null);
-          return;
-        }
-
-        if (!session?.user) {
-          if (mounted) setUser(null);
-          return;
-        }
-
-        const appUser = await getUsuarioFromDatabase(session.user);
-
-        if (mounted) {
-          setUser(appUser);
-        }
-      } catch (error) {
-        console.error("Error general en AuthContext:", error);
-        if (mounted) setUser(null);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    loadUser();
-
+    // Escucha todos los cambios de sesión (incluyendo la carga inicial)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      const handleAuthChange = async () => {
+      if (!session?.user) {
+        if (mounted) {
+          setUser(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      // Usamos setTimeout(0) para evitar el deadlock con async en onAuthStateChange
+      setTimeout(async () => {
         try {
-          if (!session?.user) {
-            if (mounted) setUser(null);
-            return;
-          }
-
           const appUser = await getUsuarioFromDatabase(session.user);
-
           if (mounted) {
             setUser(appUser);
           }
-        } catch (error) {
-          console.error("Error en cambio de sesión:", error);
+        } catch (err) {
+          console.error("Error cargando usuario:", err);
           if (mounted) setUser(null);
         } finally {
           if (mounted) setLoading(false);
         }
-      };
-
-      handleAuthChange();
+      }, 0);
     });
 
     return () => {
@@ -118,8 +86,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
-  const hasRole = (role: string) => {
-    return user?.role === role;
+  const hasRole = (...roles: string[]) => {
+    return roles.includes(user?.role ?? "");
   };
 
   return (
@@ -131,10 +99,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-
   if (!context) {
     throw new Error("useAuth debe usarse dentro de AuthProvider");
   }
-
   return context;
 }
