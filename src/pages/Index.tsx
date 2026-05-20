@@ -1,5 +1,5 @@
 import { Navigate, Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LanguageContext";
 import { Bus, MapPin, ShieldCheck, QrCode, CreditCard, Users, MapIcon, CalendarIcon } from "lucide-react";
@@ -7,6 +7,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { rutasService } from "@/lib/rutasService";
+import type { Ruta } from "@/lib/rutasService";
 
 export default function Index() {
     const { user, loading } = useAuth();
@@ -15,6 +18,27 @@ export default function Index() {
     const [origen, setOrigen] = useState("");
     const [destino, setDestino] = useState("");
     const [fecha, setFecha] = useState("");
+    const [sugerenciasOrigen, setSugerenciasOrigen] = useState<string[]>([]);
+    const [sugerenciasDestino, setSugerenciasDestino] = useState<string[]>([]);
+    const [rutas, setRutas] = useState<Ruta[]>([]);
+    const [loadingRutas, setLoadingRutas] = useState(true);
+
+    useEffect(() => {
+        const fetchRutas = async () => {
+            try {
+                const data = await rutasService.getAll();
+                setRutas(data);
+            } catch (error) {
+                console.error("Error al cargar rutas", error);
+            } finally {
+                setLoadingRutas(false);
+            }
+        };
+        fetchRutas();
+    }, []);
+
+    const origenesUnicos = Array.from(new Set(rutas.map(r => r.ciudad_origen))).sort();
+    const destinosUnicos = Array.from(new Set(rutas.map(r => r.ciudad_destino))).sort();
 
     if (!loading && user && (user.role === "administrador" || user.role === "oficinista")) {
         return <Navigate to="/dashboard" replace />;
@@ -66,11 +90,35 @@ export default function Index() {
                                 <MapIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
                                 <Input
                                     id="origen"
-                                    placeholder={t("search_origin_placeholder")}
+                                    placeholder={loadingRutas ? "Cargando..." : (origenesUnicos.length === 0 ? "No disponible" : t("search_origin_placeholder"))}
                                     value={origen}
-                                    onChange={(e) => setOrigen(e.target.value)}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setOrigen(val);
+                                        setSugerenciasOrigen(
+                                            val.length > 0
+                                                ? origenesUnicos.filter((c) => c.toLowerCase().startsWith(val.toLowerCase()))
+                                                : []
+                                        );
+                                    }}
+                                    onBlur={() => setTimeout(() => setSugerenciasOrigen([]), 150)}
+                                    autoComplete="off"
                                     className="pl-10"
+                                    disabled={loadingRutas || origenesUnicos.length === 0}
                                 />
+                                {sugerenciasOrigen.length > 0 && (
+                                    <ul className="absolute z-50 w-full bg-popover text-popover-foreground border border-border rounded-md shadow-md mt-1 max-h-48 overflow-y-auto">
+                                        {sugerenciasOrigen.map((c) => (
+                                            <li
+                                                key={c}
+                                                className="px-4 py-2 text-sm cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                                                onMouseDown={() => { setOrigen(c); setSugerenciasOrigen([]); }}
+                                            >
+                                                {c}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
                             </div>
                         </div>
 
@@ -80,11 +128,35 @@ export default function Index() {
                                 <MapIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
                                 <Input
                                     id="destino"
-                                    placeholder={t("search_destination_placeholder")}
+                                    placeholder={loadingRutas ? "Cargando..." : (destinosUnicos.length === 0 ? "No disponible" : t("search_destination_placeholder"))}
                                     value={destino}
-                                    onChange={(e) => setDestino(e.target.value)}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setDestino(val);
+                                        setSugerenciasDestino(
+                                            val.length > 0
+                                                ? destinosUnicos.filter((c) => c.toLowerCase().startsWith(val.toLowerCase()))
+                                                : []
+                                        );
+                                    }}
+                                    onBlur={() => setTimeout(() => setSugerenciasDestino([]), 150)}
+                                    autoComplete="off"
                                     className="pl-10"
+                                    disabled={loadingRutas || destinosUnicos.length === 0}
                                 />
+                                {sugerenciasDestino.length > 0 && (
+                                    <ul className="absolute z-50 w-full bg-popover text-popover-foreground border border-border rounded-md shadow-md mt-1 max-h-48 overflow-y-auto">
+                                        {sugerenciasDestino.map((c) => (
+                                            <li
+                                                key={c}
+                                                className="px-4 py-2 text-sm cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                                                onMouseDown={() => { setDestino(c); setSugerenciasDestino([]); }}
+                                            >
+                                                {c}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
                             </div>
                         </div>
 

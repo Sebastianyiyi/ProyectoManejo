@@ -14,7 +14,7 @@ export default function DashboardLayout() {
     { to: "/dashboard/cooperativa", label: t("dash_cooperative"), icon: Building2 },
     { to: "/dashboard/buses",       label: t("dash_buses"),       icon: Bus },
     { to: "/dashboard/rutas",       label: t("dash_routes"),      icon: Map },
-    { to: "/dashboard/usuarios",    label: t("dash_users"),       icon: Users },
+    { to: "/dashboard/usuarios",    label: t("dash_users"),       icon: Users, adminOnly: true },
     { to: "/dashboard/boletos",     label: t("dash_tickets"),     icon: Ticket },
   ];
 
@@ -37,7 +37,7 @@ export default function DashboardLayout() {
         </div>
 
         <nav className="flex-1 p-3 space-y-1">
-          {NAV.map(({ to, label, icon: Icon, end }) => (
+          {NAV.filter(item => !item.adminOnly || hasRole("administrador")).map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
