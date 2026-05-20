@@ -12,6 +12,8 @@ import {
   Check,
   Printer,
   Home,
+  Star,
+  ArrowUpDown,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -49,6 +51,13 @@ interface Usuario {
 
 // ─── ETAPAS DEL FLUJO ──────────────────────────────────────────────────────
 type Etapa = "asientos" | "pago" | "confirmacion";
+
+// ─── Config visual por tipo de bus ──────────────────────────────────────────
+const tipoBusConfig: Record<string, { label: string; badge: string; icon: React.ReactNode }> = {
+  normal:     { label: "Normal",     badge: "bg-slate-100 text-slate-700 border border-slate-300", icon: <Bus className="h-3.5 w-3.5" /> },
+  vip:        { label: "VIP",        badge: "bg-amber-100 text-amber-700 border border-amber-400", icon: <Star className="h-3.5 w-3.5" /> },
+  doble_piso: { label: "Doble Piso", badge: "bg-indigo-100 text-indigo-700 border border-indigo-400", icon: <ArrowUpDown className="h-3.5 w-3.5" /> },
+};
 
 // ──────────────────────────────────────────────────────────────────────────
 // COMPONENTE PRINCIPAL
@@ -248,6 +257,16 @@ const labelDescuento: Record<TipoDescuento, string> = {
                     })
                   : ""}
               </p>
+              {/* Badge tipo de bus + placa */}
+              {viaje?.buses?.tipo && tipoBusConfig[viaje.buses.tipo] && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${tipoBusConfig[viaje.buses.tipo].badge}`}>
+                    {tipoBusConfig[viaje.buses.tipo].icon}
+                    {tipoBusConfig[viaje.buses.tipo].label}
+                  </span>
+                  <span className="text-xs text-muted-foreground">Placa: {viaje.buses.placa}</span>
+                </div>
+              )}
             </div>
             <div className="text-right space-y-1">
               <p className="text-sm text-muted-foreground">Precio por asiento</p>
