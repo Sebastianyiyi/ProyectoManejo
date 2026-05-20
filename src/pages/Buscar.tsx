@@ -39,11 +39,11 @@ interface Viaje {
   } | null;
 }
 
-// Etiqueta y estilo visual por tipo de bus
+// Etiqueta y estilo visual por tipo de bus (valores del constraint de BD)
 const tipoBusConfig: Record<string, { label: string; className: string }> = {
-  normal:     { label: "Normal",      className: "bg-slate-100 text-slate-700 border border-slate-300" },
-  vip:        { label: "VIP",         className: "bg-amber-100 text-amber-700 border border-amber-400" },
-  doble_piso: { label: "Doble Piso",  className: "bg-indigo-100 text-indigo-700 border border-indigo-400" },
+  economico:  { label: "Normal",      className: "bg-slate-100 text-slate-700 border border-slate-300" },
+  ejecutivo:  { label: "VIP",         className: "bg-amber-100 text-amber-700 border border-amber-400" },
+  premium:    { label: "Doble Piso",  className: "bg-indigo-100 text-indigo-700 border border-indigo-400" },
 };
 
 export default function Buscar() {
@@ -223,10 +223,10 @@ export default function Buscar() {
             <Select value={tipo} onValueChange={setTipo}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="todos" className="focus:bg-primary focus:text-primary-foreground">Todos</SelectItem>
-                <SelectItem value="normal" className="focus:bg-primary focus:text-primary-foreground">Normal</SelectItem>
-                <SelectItem value="vip" className="focus:bg-primary focus:text-primary-foreground">VIP</SelectItem>
-                <SelectItem value="doble_piso" className="focus:bg-primary focus:text-primary-foreground">Doble Piso</SelectItem>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="economico">Normal</SelectItem>
+                <SelectItem value="ejecutivo">VIP</SelectItem>
+                <SelectItem value="premium">Doble Piso</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -272,9 +272,9 @@ export default function Buscar() {
                       </div>
                     </div>
                     <div className="flex-1 border-t border-dashed border-border relative">
-                      {v.buses?.tipo === "doble_piso"
+                      {v.buses?.tipo === "premium"
                         ? <ArrowUpDown className="h-4 w-4 absolute -top-2 left-1/2 -translate-x-1/2 text-indigo-500 bg-card" />
-                        : v.buses?.tipo === "vip"
+                        : v.buses?.tipo === "ejecutivo"
                         ? <Star className="h-4 w-4 absolute -top-2 left-1/2 -translate-x-1/2 text-amber-500 bg-card" />
                         : <Bus className="h-4 w-4 absolute -top-2 left-1/2 -translate-x-1/2 text-muted-foreground bg-card" />
                       }

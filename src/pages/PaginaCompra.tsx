@@ -52,11 +52,11 @@ interface Usuario {
 // ─── ETAPAS DEL FLUJO ──────────────────────────────────────────────────────
 type Etapa = "asientos" | "pago" | "confirmacion";
 
-// ─── Config visual por tipo de bus ──────────────────────────────────────────
+// ─── Config visual por tipo de bus (valores reales del constraint de BD) ────────────
 const tipoBusConfig: Record<string, { label: string; badge: string; icon: React.ReactNode }> = {
-  normal:     { label: "Normal",     badge: "bg-slate-100 text-slate-700 border border-slate-300", icon: <Bus className="h-3.5 w-3.5" /> },
-  vip:        { label: "VIP",        badge: "bg-amber-100 text-amber-700 border border-amber-400", icon: <Star className="h-3.5 w-3.5" /> },
-  doble_piso: { label: "Doble Piso", badge: "bg-indigo-100 text-indigo-700 border border-indigo-400", icon: <ArrowUpDown className="h-3.5 w-3.5" /> },
+  economico:  { label: "Normal",     badge: "bg-slate-100 text-slate-700 border border-slate-300", icon: <Bus className="h-3.5 w-3.5" /> },
+  ejecutivo:  { label: "VIP",        badge: "bg-amber-100 text-amber-700 border border-amber-400", icon: <Star className="h-3.5 w-3.5" /> },
+  premium:    { label: "Doble Piso", badge: "bg-indigo-100 text-indigo-700 border border-indigo-400", icon: <ArrowUpDown className="h-3.5 w-3.5" /> },
 };
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -317,8 +317,8 @@ const labelDescuento: Record<TipoDescuento, string> = {
             </div>
           </div>
 
-          {/* Etiqueta Piso 1 para doble piso */}
-          {viaje?.buses?.tipo === "doble_piso" && (
+          {/* Etiqueta Piso 1 para bus premium (doble piso) */}
+          {viaje?.buses?.tipo === "premium" && (
             <div className="flex items-center gap-3 mb-3">
               <div className="flex-1 border-t border-border" />
               <span className="text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-300 px-3 py-1 rounded-full">
@@ -336,9 +336,9 @@ const labelDescuento: Record<TipoDescuento, string> = {
                 // el separador aparece cuando la fila actual es la primera con tipo "vip"
                 // y la anterior era "normal" (en un bus doble_piso)
                 const primeraFilaVip =
-                  viaje?.buses?.tipo === "doble_piso" &&
-                  asientos.some((a) => a.fila === fila && a.tipo === "vip") &&
-                  !asientos.some((a) => a.fila === fila - 1 && a.tipo === "vip");
+                  viaje?.buses?.tipo === "premium" &&
+                  asientos.some((a) => a.fila === fila && a.tipo === "ejecutivo") &&
+                  !asientos.some((a) => a.fila === fila - 1 && a.tipo === "ejecutivo");
 
                 return (
                   <div key={fila}>
@@ -365,14 +365,14 @@ const labelDescuento: Record<TipoDescuento, string> = {
 
                         const ocupado    = asiento.ocupado;
                         const seleccionado = seleccionados.includes(asiento.id);
-                        const esVip      = asiento.tipo === "vip";
+                        const esEjecutivo = asiento.tipo === "ejecutivo";
 
                         return (
                           <button
                             key={asiento.id}
                             disabled={ocupado}
                             onClick={() => !ocupado && toggleAsiento(asiento.id)}
-                            title={`Asiento ${asiento.numero}${esVip ? " (VIP)" : ""}`}
+                            title={`Asiento ${asiento.numero}${esEjecutivo ? " (Ejecutivo)" : ""}`}
                             className={`
                               ${pasillo}
                               w-10 h-10 rounded-lg text-xs font-semibold
@@ -383,7 +383,7 @@ const labelDescuento: Record<TipoDescuento, string> = {
                                 ? "bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed"
                                 : seleccionado
                                   ? "bg-blue-500 border-blue-600 text-white scale-105 shadow-md"
-                                  : esVip
+                                  : esEjecutivo
                                     ? "bg-yellow-50 border-yellow-400 text-yellow-700 hover:bg-yellow-100"
                                     : "bg-muted border-border text-foreground hover:bg-accent hover:scale-105"
                               }
