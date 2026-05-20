@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { cooperativaService } from "@/lib/cooperativaService";
 import type { Cooperativa } from "@/lib/cooperativaService";
+import { useLang } from "@/contexts/LanguageContext";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Bus, Map, CalendarClock, Ticket, CheckCircle, Clock, AlertCircle } from "lucide-react";
@@ -46,14 +47,15 @@ function StatCard({
   );
 }
 
-const estadoBadge: Record<string, { label: string; class: string }> = {
-  verificada: { label: "Verificada", class: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
-  pendiente: { label: "Pendiente", class: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
-  suspendida: { label: "Suspendida", class: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
+const estadoBadgeClass: Record<string, string> = {
+  verificada: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  pendiente: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+  suspendida: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
 };
 
 export default function CooperativaPerfilPage() {
   const { toast } = useToast();
+  const { t } = useLang();
   const [cooperativa, setCooperativa] = useState<Cooperativa | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [proximos, setProximos] = useState<ViajeProximo[]>([]);
@@ -96,7 +98,7 @@ export default function CooperativaPerfilPage() {
         });
         setProximos((proximosViajes as unknown as ViajeProximo[]) ?? []);
       } catch {
-        toast({ title: "Error al cargar estadísticas", variant: "destructive" });
+        toast({ title: t("coop_error"), variant: "destructive" });
       } finally {
         setLoading(false);
       }
@@ -104,15 +106,21 @@ export default function CooperativaPerfilPage() {
     load();
   }, [toast]);
 
-  if (loading) return <div className="p-6 text-muted-foreground text-sm">Cargando panel...</div>;
+  if (loading) return <div className="p-6 text-muted-foreground text-sm">{t("coop_loading")}</div>;
 
   if (!cooperativa) return (
     <div className="p-6 text-muted-foreground text-sm">
-      No se encontró ninguna cooperativa en la base de datos.
+      {t("coop_not_found")}
     </div>
   );
 
-  const badge = estadoBadge[cooperativa.estado] ?? estadoBadge.pendiente;
+  const estadoLabelKey = cooperativa.estado === "verificada"
+    ? "coop_estado_verificada"
+    : cooperativa.estado === "suspendida"
+    ? "coop_estado_suspendida"
+    : "coop_estado_pendiente";
+
+  const badgeClass = estadoBadgeClass[cooperativa.estado] ?? estadoBadgeClass.pendiente;
 
   return (
     <div className="p-6 space-y-6">
@@ -128,8 +136,8 @@ export default function CooperativaPerfilPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold">{cooperativa.nombre}</h1>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badge.class}`}>
-              {badge.label}
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badgeClass}`}>
+              {t(estadoLabelKey)}
             </span>
           </div>
           <p className="text-sm text-muted-foreground">
@@ -142,11 +150,11 @@ export default function CooperativaPerfilPage() {
       {/* Tarjetas de estadísticas */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          <StatCard icon={Bus} label="Buses activos" value={stats.buses} color="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" />
-          <StatCard icon={Map} label="Rutas totales" value={stats.rutas} color="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400" />
-          <StatCard icon={CalendarClock} label="Viajes programados" value={stats.viajesProgramados} color="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400" />
-          <StatCard icon={Clock} label="Reservas pendientes" value={stats.reservasPendientes} color="bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" />
-          <StatCard icon={Ticket} label="Boletos emitidos" value={stats.boletosEmitidos} color="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" />
+          <StatCard icon={Bus} label={t("coop_stat_buses")} value={stats.buses} color="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" />
+          <StatCard icon={Map} label={t("coop_stat_rutas")} value={stats.rutas} color="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400" />
+          <StatCard icon={CalendarClock} label={t("coop_stat_viajes")} value={stats.viajesProgramados} color="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400" />
+          <StatCard icon={Clock} label={t("coop_stat_reservas")} value={stats.reservasPendientes} color="bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" />
+          <StatCard icon={Ticket} label={t("coop_stat_boletos")} value={stats.boletosEmitidos} color="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" />
         </div>
       )}
 
@@ -154,22 +162,22 @@ export default function CooperativaPerfilPage() {
       <div>
         <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
           <CheckCircle size={16} className="text-primary" />
-          Próximos viajes programados
+          {t("coop_upcoming")}
         </h2>
         {proximos.length === 0 ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground p-4 border rounded-lg">
             <AlertCircle size={16} />
-            No hay viajes programados próximamente.
+            {t("coop_no_upcoming")}
           </div>
         ) : (
           <Card className="overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-muted-foreground">
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium">Ruta</th>
-                  <th className="text-left px-4 py-3 font-medium">Fecha de salida</th>
-                  <th className="text-left px-4 py-3 font-medium">Bus</th>
-                  <th className="text-right px-4 py-3 font-medium">Precio base</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("coop_col_route")}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("coop_col_date")}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("coop_col_bus")}</th>
+                  <th className="text-right px-4 py-3 font-medium">{t("coop_col_price")}</th>
                 </tr>
               </thead>
               <tbody>

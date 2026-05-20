@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useLang } from "@/contexts/LanguageContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import { Eye, EyeOff, Lock, MailCheck } from "lucide-react";
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useLang();
   const [canReset, setCanReset] = useState(false);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -29,21 +31,21 @@ export default function ResetPasswordPage() {
   const handleReset = async () => {
     if (!password) return;
     if (password !== confirm) {
-      toast({ title: "Las contraseñas no coinciden", variant: "destructive" });
+      toast({ title: t("reset_mismatch"), variant: "destructive" });
       return;
     }
     if (password.length < 6) {
-      toast({ title: "Mínimo 6 caracteres", variant: "destructive" });
+      toast({ title: t("reset_min"), variant: "destructive" });
       return;
     }
     try {
       setSaving(true);
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
-      toast({ title: "Contraseña actualizada ✓" });
+      toast({ title: t("reset_success") });
       navigate("/auth");
     } catch {
-      toast({ title: "Error al actualizar la contraseña", variant: "destructive" });
+      toast({ title: t("reset_error"), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -54,13 +56,10 @@ export default function ResetPasswordPage() {
       <div className="min-h-[60vh] flex items-center justify-center p-6">
         <Card className="p-8 max-w-sm w-full text-center space-y-4">
           <MailCheck size={36} className="mx-auto text-muted-foreground" />
-          <h1 className="text-xl font-bold">Enlace no válido</h1>
-          <p className="text-sm text-muted-foreground">
-            Accede a esta página desde el correo de recuperación que te enviamos.
-            El enlace expira en 1 hora.
-          </p>
+          <h1 className="text-xl font-bold">{t("reset_invalid_title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("reset_invalid_desc")}</p>
           <Button variant="outline" className="w-full" onClick={() => navigate("/")}>
-            Volver al inicio
+            {t("reset_go_home")}
           </Button>
         </Card>
       </div>
@@ -72,12 +71,12 @@ export default function ResetPasswordPage() {
       <Card className="p-8 max-w-sm w-full space-y-5">
         <div className="text-center space-y-1">
           <Lock size={28} className="mx-auto text-primary" />
-          <h1 className="text-xl font-bold">Nueva contraseña</h1>
-          <p className="text-sm text-muted-foreground">Elige una contraseña segura</p>
+          <h1 className="text-xl font-bold">{t("reset_title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("reset_subtitle")}</p>
         </div>
 
         <div className="space-y-1">
-          <Label>Nueva contraseña</Label>
+          <Label>{t("reset_new_password")}</Label>
           <div className="relative">
             <Input
               type={showPass ? "text" : "password"}
@@ -97,7 +96,7 @@ export default function ResetPasswordPage() {
         </div>
 
         <div className="space-y-1">
-          <Label>Confirmar contraseña</Label>
+          <Label>{t("reset_confirm")}</Label>
           <Input
             type="password"
             value={confirm}
@@ -107,7 +106,7 @@ export default function ResetPasswordPage() {
         </div>
 
         <Button onClick={handleReset} disabled={saving} className="w-full">
-          {saving ? "Guardando..." : "Confirmar nueva contraseña"}
+          {saving ? t("reset_saving") : t("reset_submit")}
         </Button>
       </Card>
     </div>
