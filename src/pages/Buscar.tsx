@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  calcularPrecio,
+  detectarDescuento,
+  type TipoDescuento,
+} from "@/lib/boletosService";
 import { Loader2, Bus, Clock, MapPin, Star, ArrowUpDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,7 +64,10 @@ export default function Buscar() {
   const [resultados, setResultados] = useState<Viaje[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Cargar ciudades desde rutas para el autocompletado
+  // Descuento del usuario autenticado
+  const [tipoDescuento, setTipoDescuento] = useState<TipoDescuento>("ninguno");
+
+  // Cargar ciudades y perfil del usuario al montar
   useEffect(() => {
     const cargarCiudades = async () => {
       const { data } = await supabase
@@ -71,7 +79,20 @@ export default function Buscar() {
         setCiudades(unicas);
       }
     };
+
+    const cargarDescuentoUsuario = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: perfil } = await supabase
+        .from("usuarios")
+        .select("fecha_nacimiento, tiene_discapacidad")
+        .eq("email", user.email)
+        .single();
+      if (perfil) setTipoDescuento(detectarDescuento(perfil));
+    };
+
     cargarCiudades();
+    cargarDescuentoUsuario();
   }, []);
 
   // Consulta de VladAlz con timezone y estado programado
@@ -269,7 +290,23 @@ export default function Buscar() {
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2 md:border-l md:pl-4">
-                  <div className="text-2xl font-bold text-primary">${Number(v.precio_base).toFixed(2)}</div>
+                  {tipoDescuento !== "ninguno" ? (
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground line-through">
+                        ${Number(v.precio_base).toFixed(2)}
+                      </p>
+                      <p className="text-2xl font-bold text-primary">
+                        ${calcularPrecio(Number(v.precio_base), tipoDescuento).toFixed(2)}
+                      </p>
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                        50% dto. aplicado
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="text-2xl font-bold text-primary">
+                      ${Number(v.precio_base).toFixed(2)}
+                    </div>
+                  )}
                   <Button onClick={() => navigate(`/compra/${v.id}`)}>
                     Elegir asientos
                   </Button>

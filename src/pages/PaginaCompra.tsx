@@ -249,15 +249,24 @@ const labelDescuento: Record<TipoDescuento, string> = {
                   : ""}
               </p>
             </div>
-            <div className="text-right">
+            <div className="text-right space-y-1">
               <p className="text-sm text-muted-foreground">Precio por asiento</p>
-              <p className="text-3xl font-bold text-blue-600">
-                ${precioUnitario.toFixed(2)}
-              </p>
-              {tipoDescuento !== "ninguno" && (
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                  {labelDescuento[tipoDescuento]}
-                </span>
+              {tipoDescuento !== "ninguno" ? (
+                <>
+                  <p className="text-sm text-muted-foreground line-through">
+                    ${precioBase.toFixed(2)} precio base
+                  </p>
+                  <p className="text-3xl font-bold text-blue-600">
+                    ${precioUnitario.toFixed(2)}
+                  </p>
+                  <span className="inline-block text-xs bg-green-100 text-green-700 border border-green-300 px-2 py-1 rounded-full">
+                    {labelDescuento[tipoDescuento]}
+                  </span>
+                </>
+              ) : (
+                <p className="text-3xl font-bold text-blue-600">
+                  ${precioUnitario.toFixed(2)}
+                </p>
               )}
             </div>
           </div>
