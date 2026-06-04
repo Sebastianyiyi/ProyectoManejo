@@ -14,6 +14,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLang } from "@/contexts/LanguageContext";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 // Interfaz de VladAlz con cooperativas anidadas en buses
 interface Viaje {
@@ -32,6 +39,9 @@ interface Viaje {
     tipo: string;
     capacidad: number;
     placa: string;
+    numero: string | null;
+    marca_chasis: string | null;
+    marca_carroceria: string | null;
     cooperativas: {
       id: string;
       nombre: string;
@@ -65,6 +75,9 @@ export default function Buscar() {
 
   const [resultados, setResultados] = useState<Viaje[]>([]);
   const [loading, setLoading] = useState(false);
+  const [asientosOcupados, setAsientosOcupados] = useState<Record<number, number>>({});
+  const [modalInfoOpen, setModalInfoOpen] = useState(false);
+  const [viajeSeleccionadoInfo, setViajeSeleccionadoInfo] = useState<Viaje | null>(null);
 
   // Descuento del usuario autenticado
   const [tipoDescuento, setTipoDescuento] = useState<TipoDescuento>("ninguno");
@@ -109,7 +122,7 @@ export default function Buscar() {
       .select(`
         id, fecha_salida, fecha_llegada_est, precio_base, estado,
         rutas (ciudad_origen, ciudad_destino, distancia_km, duracion_minutos),
-        buses (tipo, capacidad, placa, cooperativas (id, nombre, logo_url))
+        buses (tipo, capacidad, placa, numero, marca_chasis, marca_carroceria, cooperativas (id, nombre, logo_url))
       `)
       .eq("estado", "programado")
       .gte("fecha_salida", fechaInicio)
@@ -117,6 +130,34 @@ export default function Buscar() {
       .order("fecha_salida");
 
     let res = (data ?? []) as unknown as Viaje[];
+
+    // Consultar reservas para contar asientos ocupados y filtrar/mostrar disponibilidad
+    const viajeIds = res.map((v) => v.id);
+    const occupiedSeatsMap: Record<number, number> = {};
+    if (viajeIds.length > 0) {
+      const { data: reservas } = await supabase
+        .from("reservas")
+        .select("viaje_id, id, detalle_reserva(id)")
+        .in("viaje_id", viajeIds)
+        .in("estado", ["confirmada", "pendiente_pago", "pago_en_verificacion", "pendiente_validacion"]);
+      
+      if (reservas) {
+        reservas.forEach((r: any) => {
+          const count = Array.isArray(r.detalle_reserva)
+            ? r.detalle_reserva.length
+            : (r.detalle_reserva ? 1 : 0);
+          occupiedSeatsMap[r.viaje_id] = (occupiedSeatsMap[r.viaje_id] || 0) + count;
+        });
+      }
+    }
+    setAsientosOcupados(occupiedSeatsMap);
+
+    // Ocultar buses sin disponibilidad (cupos llenos)
+    res = res.filter((v) => {
+      const occupied = occupiedSeatsMap[v.id] || 0;
+      const capacity = v.buses?.capacidad ?? 0;
+      return occupied < capacity;
+    });
 
     if (origen.trim())
       res = res.filter((v) =>
@@ -262,7 +303,18 @@ export default function Buscar() {
                         {tipoBusConfig[v.buses.tipo].label}
                       </span>
                     )}
-                    <span className="text-xs text-muted-foreground">{v.buses?.placa}</span>
+                    {v.buses?.numero && (
+                      <span className="text-xs font-semibold bg-primary/10 text-primary px-2.5 py-0.5 rounded-full">
+                        Disco Nº {v.buses.numero}
+                      </span>
+                    )}
+                    <span className="text-xs text-muted-foreground font-mono">{v.buses?.placa}</span>
+                    {v.buses?.marca_chasis && (
+                      <span className="text-xs text-muted-foreground">Chasis: {v.buses.marca_chasis}</span>
+                    )}
+                    {v.buses?.marca_carroceria && (
+                      <span className="text-xs text-muted-foreground">Modelo: {v.buses.marca_carroceria}</span>
+                    )}
                   </div>
                   <div className="flex items-center gap-3 text-foreground">
                     <div>
@@ -309,15 +361,128 @@ export default function Buscar() {
                       ${Number(v.precio_base).toFixed(2)}
                     </div>
                   )}
-                  <Button onClick={() => navigate(`/compra/${v.id}`)}>
-                    {t("buscar_select_seats")}
-                  </Button>
+                  <div className="flex flex-col gap-2 w-full">
+                    <Button onClick={() => navigate(`/compra/${v.id}`)} className="w-full">
+                      {t("buscar_select_seats")}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => { setViajeSeleccionadoInfo(v); setModalInfoOpen(true); }} className="w-full text-xs">
+                      Más información
+                    </Button>
+                  </div>
                 </div>
               </div>
             </Card>
           ))}
         </div>
       )}
+
+      {/* Dialog para mostrar información detallada del viaje */}
+      <Dialog open={modalInfoOpen} onOpenChange={setModalInfoOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Información detallada del viaje</DialogTitle>
+          </DialogHeader>
+
+          {viajeSeleccionadoInfo && (
+            <div className="space-y-4 py-2">
+              <div className="flex items-center gap-3 border-b pb-3">
+                {viajeSeleccionadoInfo.buses?.cooperativas?.logo_url ? (
+                  <img
+                    src={viajeSeleccionadoInfo.buses.cooperativas.logo_url}
+                    alt="Logo Cooperativa"
+                    className="w-12 h-12 object-contain rounded-md"
+                  />
+                ) : (
+                  <div className="w-12 h-12 bg-primary/10 text-primary grid place-items-center rounded-md font-bold">
+                    COOP
+                  </div>
+                )}
+                <div>
+                  <h4 className="font-semibold text-lg">
+                    {viajeSeleccionadoInfo.buses?.cooperativas?.nombre}
+                  </h4>
+                  <p className="text-xs text-muted-foreground">Cooperativa verificada</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <p>
+                  <span className="font-semibold">Ruta:</span>{" "}
+                  {viajeSeleccionadoInfo.rutas?.ciudad_origen} → {viajeSeleccionadoInfo.rutas?.ciudad_destino}
+                </p>
+                {viajeSeleccionadoInfo.rutas?.distancia_km && (
+                  <p>
+                    <span className="font-semibold">Distancia:</span> {viajeSeleccionadoInfo.rutas.distancia_km} km
+                  </p>
+                )}
+                {viajeSeleccionadoInfo.rutas?.duracion_minutos && (
+                  <p>
+                    <span className="font-semibold">Duración estimada:</span>{" "}
+                    {Math.floor(viajeSeleccionadoInfo.rutas.duracion_minutos / 60)}h{" "}
+                    {viajeSeleccionadoInfo.rutas.duracion_minutos % 60}m
+                  </p>
+                )}
+                <p>
+                  <span className="font-semibold">Salida:</span>{" "}
+                  {new Date(viajeSeleccionadoInfo.fecha_salida).toLocaleString("es-EC")}
+                </p>
+                <p>
+                  <span className="font-semibold">Llegada aprox:</span>{" "}
+                  {new Date(viajeSeleccionadoInfo.fecha_llegada_est).toLocaleString("es-EC")}
+                </p>
+              </div>
+
+              <div className="border-t pt-3 space-y-2 text-sm">
+                <h5 className="font-semibold text-muted-foreground text-xs uppercase tracking-wider">
+                  Detalles del bus
+                </h5>
+                <div className="grid grid-cols-2 gap-2">
+                  <p>
+                    <span className="font-medium">Disco Nº:</span>{" "}
+                    {viajeSeleccionadoInfo.buses?.numero ?? "—"}
+                  </p>
+                  <p>
+                    <span className="font-medium">Placa:</span> {viajeSeleccionadoInfo.buses?.placa}
+                  </p>
+                  <p>
+                    <span className="font-medium">Chasis:</span> {viajeSeleccionadoInfo.buses?.marca_chasis ?? "—"}
+                  </p>
+                  <p>
+                    <span className="font-medium">Modelo:</span> {viajeSeleccionadoInfo.buses?.marca_carroceria ?? "—"}
+                  </p>
+                  <p>
+                    <span className="font-medium">Tipo:</span>{" "}
+                    <span className="capitalize">{viajeSeleccionadoInfo.buses?.tipo}</span>
+                  </p>
+                  <p>
+                    <span className="font-medium">Capacidad:</span> {viajeSeleccionadoInfo.buses?.capacidad} asientos
+                  </p>
+                </div>
+              </div>
+
+              <div className="border-t pt-3 flex justify-between items-center">
+                <div>
+                  <span className="text-xs text-muted-foreground block">Asientos disponibles</span>
+                  <span className="text-sm font-semibold text-green-600">
+                    {(viajeSeleccionadoInfo.buses?.capacidad ?? 0) - (asientosOcupados[viajeSeleccionadoInfo.id] || 0)}{" "}
+                    libres
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-muted-foreground block">Precio individual</span>
+                  <span className="text-lg font-bold text-primary">
+                    ${Number(viajeSeleccionadoInfo.precio_base).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button onClick={() => setModalInfoOpen(false)}>Cerrar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
