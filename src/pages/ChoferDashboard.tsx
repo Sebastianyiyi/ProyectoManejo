@@ -604,8 +604,8 @@ export default function ChoferDashboard() {
 
 
   const viajeVenta =
-  viajesDisponiblesVenta.find((viaje) => String(viaje.id) === viajeVentaId) ?? null;
-
+    viajesDisponiblesVenta.find((viaje) => String(viaje.id) === viajeVentaId) ?? null;
+ 
   const totalVenta = asientosSeleccionados.reduce(
     (total, item) => total + item.precio_unitario,
     0
@@ -1662,6 +1662,7 @@ export default function ChoferDashboard() {
               </div>
             )}
           </section>
+          
            <section className="space-y-4">
             <h2 className="text-xl font-semibold">{t("chofer_history_title")}</h2>
 
