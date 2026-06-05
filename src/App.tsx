@@ -6,7 +6,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { LanguageProvider, useLang } from "@/contexts/LanguageContext";
+import { LanguageProvider } from "@/contexts/LanguageContext";
+import { CooperativaProvider } from "@/contexts/CooperativaContext";
 
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -20,20 +21,12 @@ import Boleto from "./pages/Boleto";
 
 import { Layout } from "./components/ui/Layout";
 import DashboardLayout from "./pages/dashboard/DashboardLayout";
+import InicioPage from "./pages/dashboard/InicioPage";
 import BusesPage from "./pages/dashboard/BusesPage";
 import CooperativaPerfilPage from "./pages/dashboard/CooperativaPerfilPage";
 import RutasPage from "./pages/dashboard/RutasPage";
 
 const PaginaCompra = lazy(() => import("./pages/PaginaCompra"));
-
-function DashboardHome() {
-  const { t } = useLang();
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold">{t("dash_welcome")}</h1>
-    </div>
-  );
-}
 
 const NotFound = () => (
   <div className="p-8 text-2xl font-bold">404 — Página no encontrada</div>
@@ -54,6 +47,7 @@ const App = () => (
     <ThemeProvider>
       <LanguageProvider>
         <AuthProvider>
+          <CooperativaProvider>
           <TooltipProvider>
             <Toaster />
             <Sonner />
@@ -81,7 +75,7 @@ const App = () => (
                 </Route>
 
                 <Route path="/dashboard" element={<DashboardLayout />}>
-                  <Route index element={<DashboardHome />} />
+                  <Route index element={<InicioPage />} />
                   <Route path="cooperativa" element={<CooperativaPerfilPage />} />
                   <Route path="buses" element={<BusesPage />} />
                   <Route path="rutas" element={<RutasPage />} />
@@ -89,6 +83,7 @@ const App = () => (
               </Routes>
             </BrowserRouter>
           </TooltipProvider>
+          </CooperativaProvider>
         </AuthProvider>
       </LanguageProvider>
     </ThemeProvider>
