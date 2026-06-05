@@ -1,0 +1,31 @@
+# Dependencias (se instalan dentro del contenedor)
+node_modules
+
+# Build anterior
+dist
+
+# Variables de entorno locales (nunca al contenedor)
+.env
+.env.local
+.env.*.local
+
+# Control de versiones
+.git
+.gitignore
+
+# Archivos de desarrollo
+*.md
+.github
+imagenes
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
