@@ -61,9 +61,8 @@ export default function BoletosPage() {
                 ciudad_destino
               )
             ),
-            perfiles (
-              nombre,
-              apellidos,
+            usuarios (
+              full_name,
               email
             )
           `)
@@ -106,7 +105,7 @@ export default function BoletosPage() {
     if (estadoFiltro !== "Todos" && r.estado !== estadoFiltro) return false;
     
     const searchLower = search.toLowerCase();
-    const cliente = `${r.perfiles?.nombre ?? ""} ${r.perfiles?.apellidos ?? ""}`.toLowerCase();
+    const cliente = (r.usuarios?.full_name ?? "").toLowerCase();
     const origen = r.viajes?.rutas?.ciudad_origen?.toLowerCase() ?? "";
     const destino = r.viajes?.rutas?.ciudad_destino?.toLowerCase() ?? "";
     const boletoId = String(r.id);
@@ -189,7 +188,7 @@ export default function BoletosPage() {
                   const v = r.viajes;
                   const f = v?.rutas;
                   const fechaEmision = new Date(r.created_at);
-                  const clienteNombre = `${r.perfiles?.nombre ?? ""} ${r.perfiles?.apellidos ?? ""}`.trim() || "Usuario anónimo";
+                  const clienteNombre = r.usuarios?.full_name?.trim() || "Usuario anónimo";
 
                   return (
                     <tr key={r.id} className={`border-b last:border-0 ${i % 2 !== 0 ? "bg-muted/20" : ""}`}>
@@ -199,7 +198,7 @@ export default function BoletosPage() {
                       </td>
                       <td className="px-4 py-3 font-medium">
                         {clienteNombre}
-                        <div className="text-xs text-muted-foreground font-normal">{r.perfiles?.email}</div>
+                        <div className="text-xs text-muted-foreground font-normal">{r.usuarios?.email}</div>
                       </td>
                       <td className="px-4 py-3">
                         {f ? `${f.ciudad_origen} → ${f.ciudad_destino}` : "—"}
@@ -243,7 +242,7 @@ export default function BoletosPage() {
             <div className="p-4 bg-muted/20 rounded-md border text-sm">
               <div className="grid grid-cols-2 gap-2">
                 <span className="text-muted-foreground">Cliente:</span>
-                <span className="font-medium">{validatingBoleto?.perfiles?.nombre} {validatingBoleto?.perfiles?.apellidos}</span>
+                <span className="font-medium">{validatingBoleto?.usuarios?.full_name}</span>
                 <span className="text-muted-foreground">Total a pagar:</span>
                 <span className="font-bold text-primary">${Number(validatingBoleto?.precio_total).toFixed(2)}</span>
                 <span className="text-muted-foreground">Ruta:</span>
