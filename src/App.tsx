@@ -26,6 +26,7 @@ import InicioPage from "./pages/dashboard/InicioPage";
 import BusesPage from "./pages/dashboard/BusesPage";
 import CooperativaPerfilPage from "./pages/dashboard/CooperativaPerfilPage";
 import RutasPage from "./pages/dashboard/RutasPage";
+import FrecuenciasPage from "./pages/dashboard/FrecuenciasPage";
 
 const PaginaCompra = lazy(() => import("./pages/PaginaCompra"));
 
@@ -87,6 +88,7 @@ const App = () => (
                     />
                     <Route path="buses" element={<BusesPage />} />
                     <Route path="rutas" element={<RutasPage />} />
+                  <Route path="frecuencias" element={<FrecuenciasPage />} />
                   </Route>
                 </Routes>
               </BrowserRouter>
