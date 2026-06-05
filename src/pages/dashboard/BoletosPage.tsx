@@ -50,7 +50,7 @@ export default function BoletosPage() {
           .from("reservas")
           .select(`
             *,
-            viajes!inner (
+            viajes (
               fecha_salida,
               buses (
                 cooperativa_id,
