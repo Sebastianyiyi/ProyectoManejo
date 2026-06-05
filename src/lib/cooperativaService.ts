@@ -16,13 +16,37 @@ export interface CooperativaUpdate {
   logo_url: string | null;
 }
 
+export type CooperativaInsert = CooperativaUpdate;
+
+const COLUMNS = "id, nombre, ruc, estado, ciudad_principal, logo_url";
+
 export const cooperativaService = {
-  async get(): Promise<Cooperativa> {
+  // Lista todas las cooperativas no suspendidas (para el selector).
+  async getAll(): Promise<Cooperativa[]> {
     const { data, error } = await supabase
       .from("cooperativas")
-      .select("id, nombre, ruc, estado, ciudad_principal, logo_url")
+      .select(COLUMNS)
       .neq("estado", "suspendida")
-      .limit(1)
+      .order("nombre", { ascending: true });
+    if (error) throw error;
+    return data as Cooperativa[];
+  },
+
+  async getById(id: number): Promise<Cooperativa> {
+    const { data, error } = await supabase
+      .from("cooperativas")
+      .select(COLUMNS)
+      .eq("id", id)
+      .single();
+    if (error) throw error;
+    return data as Cooperativa;
+  },
+
+  async create(coop: CooperativaInsert): Promise<Cooperativa> {
+    const { data, error } = await supabase
+      .from("cooperativas")
+      .insert({ ...coop, estado: "verificada" })
+      .select(COLUMNS)
       .single();
     if (error) throw error;
     return data as Cooperativa;
@@ -33,9 +57,24 @@ export const cooperativaService = {
       .from("cooperativas")
       .update(fields)
       .eq("id", id)
-      .select()
+      .select(COLUMNS)
       .single();
     if (error) throw error;
     return data as Cooperativa;
   },
 };
+
+// Sube un logo al bucket público "cooperativas" y devuelve su URL pública.
+export async function subirLogoCooperativa(archivo: File): Promise<string> {
+  const extension = archivo.name.split(".").pop();
+  const nombreArchivo = `logos/coop_${Date.now()}.${extension}`;
+
+  const { error } = await supabase.storage
+    .from("cooperativas")
+    .upload(nombreArchivo, archivo, { upsert: true });
+
+  if (error) throw new Error("Error subiendo el logo: " + error.message);
+
+  const { data } = supabase.storage.from("cooperativas").getPublicUrl(nombreArchivo);
+  return data.publicUrl;
+}

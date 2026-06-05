@@ -3,6 +3,7 @@ import { busService, subirFotoBus, MARCAS_CHASIS, MARCAS_CARROCERIA } from "@/li
 import type { Bus, BusInsert, TipoBus } from "@/lib/busService";
 import { validarPlacaEcuador } from "@/lib/placa";
 import { useLang } from "@/contexts/LanguageContext";
+import { useCooperativa } from "@/contexts/CooperativaContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +24,6 @@ import { PlusCircle, Pencil, Trash2, Power, Image as ImageIcon, Upload, X, Loade
 
 const EMPTY_FORM: Omit<BusInsert, "cooperativa_id" | "numero"> = {
   placa: "",
-  nombre: "",
   capacidad: 40,
   tipo: "economico",
   marca_chasis: "",
@@ -35,6 +35,7 @@ const EMPTY_FORM: Omit<BusInsert, "cooperativa_id" | "numero"> = {
 export default function BusesPage() {
   const { toast } = useToast();
   const { t } = useLang();
+  const { cooperativaActiva } = useCooperativa();
   const [buses, setBuses] = useState<Bus[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -61,7 +62,8 @@ export default function BusesPage() {
     }
   }, [toast, t]);
 
-  useEffect(() => { fetchBuses(); }, [fetchBuses]);
+  // Recarga la lista cuando se monta o cuando cambia la cooperativa activa.
+  useEffect(() => { fetchBuses(); }, [fetchBuses, cooperativaActiva?.id]);
 
   const filtered = buses.filter((b) =>
     [b.placa, b.numero, b.marca_chasis, b.marca_carroceria]
@@ -78,7 +80,6 @@ export default function BusesPage() {
     setEditingBus(bus);
     setForm({
       placa: bus.placa,
-      nombre: bus.nombre ?? "",
       capacidad: bus.capacidad,
       tipo: bus.tipo,
       marca_chasis: bus.marca_chasis ?? "",
@@ -98,15 +99,13 @@ export default function BusesPage() {
       toast({ title: t("buses_plate_invalid"), variant: "destructive" });
       return;
     }
-    // El nombre vacío se guarda como null.
-    const payload = { ...form, nombre: form.nombre?.trim() || null };
     try {
       setSaving(true);
       if (editingBus) {
-        await busService.update(editingBus.id, payload);
+        await busService.update(editingBus.id, form);
         toast({ title: t("buses_updated") });
       } else {
-        await busService.create(payload);
+        await busService.create(form);
         toast({ title: t("buses_created") });
       }
       setModalOpen(false);
@@ -229,7 +228,7 @@ export default function BusesPage() {
                   <tr key={bus.id} className={`border-b last:border-0 ${i % 2 === 0 ? "" : "bg-muted/20"}`}>
                     <td className="px-4 py-3 font-mono">{bus.numero ?? "—"}</td>
                     <td className="px-4 py-3 font-mono font-semibold">{bus.placa}</td>
-                    <td className="px-4 py-3">{bus.nombre ?? "—"}</td>
+                    <td className="px-4 py-3">{cooperativaActiva?.nombre ?? "—"}</td>
                     <td className="px-4 py-3 capitalize">{bus.tipo}</td>
                     <td className="px-4 py-3">{bus.capacidad}</td>
                     <td className="px-4 py-3">{bus.marca_chasis ?? "—"}</td>
@@ -299,12 +298,6 @@ export default function BusesPage() {
               <Input placeholder="Ej: ABC-1234"
                 value={form.placa}
                 onChange={(e) => setForm({ ...form, placa: e.target.value.toUpperCase() })} />
-            </div>
-            <div className="space-y-1">
-              <Label>{t("buses_label_name")}</Label>
-              <Input placeholder={t("buses_name_placeholder")}
-                value={form.nombre ?? ""}
-                onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
             </div>
             <div className="space-y-1">
               <Label>{t("buses_label_type")}</Label>

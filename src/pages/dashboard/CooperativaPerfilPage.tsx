@@ -1,51 +1,18 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { cooperativaService } from "@/lib/cooperativaService";
-import type { Cooperativa } from "@/lib/cooperativaService";
+import { useState, useRef } from "react";
+import { cooperativaService, subirLogoCooperativa } from "@/lib/cooperativaService";
+import { useCooperativa } from "@/contexts/CooperativaContext";
 import { useLang } from "@/contexts/LanguageContext";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Bus, Map, CalendarClock, Ticket, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Building2, Upload, X, Loader2, Check } from "lucide-react";
 
-interface Stats {
-  buses: number;
-  rutas: number;
-  viajesProgramados: number;
-  reservasPendientes: number;
-  boletosEmitidos: number;
-}
-
-interface ViajeProximo {
-  id: number;
-  fecha_salida: string;
-  precio_base: number;
-  rutas: { ciudad_origen: string; ciudad_destino: string } | null;
-  buses: { placa: string } | null;
-}
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  color,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: number | string;
-  color: string;
-}) {
-  return (
-    <Card className="p-5 flex items-center gap-4">
-      <div className={`p-3 rounded-lg ${color}`}>
-        <Icon size={20} />
-      </div>
-      <div>
-        <p className="text-2xl font-bold">{value}</p>
-        <p className="text-xs text-muted-foreground">{label}</p>
-      </div>
-    </Card>
-  );
-}
+const EMPTY = { nombre: "", ruc: "", ciudad_principal: "", logo_url: "" };
 
 const estadoBadgeClass: Record<string, string> = {
   verificada: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
@@ -56,145 +23,202 @@ const estadoBadgeClass: Record<string, string> = {
 export default function CooperativaPerfilPage() {
   const { toast } = useToast();
   const { t } = useLang();
-  const [cooperativa, setCooperativa] = useState<Cooperativa | null>(null);
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [proximos, setProximos] = useState<ViajeProximo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { cooperativas, cooperativaActiva, seleccionar, refrescar } = useCooperativa();
+  const [form, setForm] = useState(EMPTY);
+  const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const coop = await cooperativaService.get();
-        setCooperativa(coop);
+  const estadoLabel = (estado: string) =>
+    estado === "verificada" ? t("coop_estado_verificada")
+      : estado === "suspendida" ? t("coop_estado_suspendida")
+      : t("coop_estado_pendiente");
 
-        const [
-          { count: buses },
-          { count: rutas },
-          { count: viajesProg },
-          { count: reservasPend },
-          { count: boletos },
-          { data: proximosViajes },
-        ] = await Promise.all([
-          supabase.from("buses").select("*", { count: "exact", head: true }).eq("cooperativa_id", coop.id).eq("activo", true),
-          supabase.from("rutas").select("*", { count: "exact", head: true }),
-          supabase.from("viajes").select("*", { count: "exact", head: true }).eq("estado", "programado"),
-          supabase.from("reservas").select("*", { count: "exact", head: true }).eq("estado", "pendiente_pago"),
-          supabase.from("boletos").select("*", { count: "exact", head: true }).eq("estado", "activo"),
-          supabase
-            .from("viajes")
-            .select("id, fecha_salida, precio_base, rutas(ciudad_origen, ciudad_destino), buses(placa)")
-            .eq("estado", "programado")
-            .gte("fecha_salida", new Date().toISOString())
-            .order("fecha_salida", { ascending: true })
-            .limit(6),
-        ]);
-
-        setStats({
-          buses: buses ?? 0,
-          rutas: rutas ?? 0,
-          viajesProgramados: viajesProg ?? 0,
-          reservasPendientes: reservasPend ?? 0,
-          boletosEmitidos: boletos ?? 0,
-        });
-        setProximos((proximosViajes as unknown as ViajeProximo[]) ?? []);
-      } catch {
-        toast({ title: t("coop_error"), variant: "destructive" });
-      } finally {
-        setLoading(false);
-      }
+  const handleLogoFile = async (file: File | undefined | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: t("buses_upload_invalid"), variant: "destructive" });
+      return;
     }
-    load();
-  }, [toast]);
+    try {
+      setUploadingLogo(true);
+      const url = await subirLogoCooperativa(file);
+      setForm((prev) => ({ ...prev, logo_url: url }));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t("buses_upload_error");
+      toast({ title: t("buses_upload_error"), description: msg, variant: "destructive" });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
 
-  if (loading) return <div className="p-6 text-muted-foreground text-sm">{t("coop_loading")}</div>;
-
-  if (!cooperativa) return (
-    <div className="p-6 text-muted-foreground text-sm">
-      {t("coop_not_found")}
-    </div>
-  );
-
-  const estadoLabelKey = cooperativa.estado === "verificada"
-    ? "coop_estado_verificada"
-    : cooperativa.estado === "suspendida"
-    ? "coop_estado_suspendida"
-    : "coop_estado_pendiente";
-
-  const badgeClass = estadoBadgeClass[cooperativa.estado] ?? estadoBadgeClass.pendiente;
+  const handleRegister = async () => {
+    if (!form.nombre.trim()) {
+      toast({ title: t("coop_name_required"), variant: "destructive" });
+      return;
+    }
+    if (!form.ruc.trim()) {
+      toast({ title: t("coop_ruc_required"), variant: "destructive" });
+      return;
+    }
+    try {
+      setSaving(true);
+      const nueva = await cooperativaService.create({
+        nombre: form.nombre.trim(),
+        ruc: form.ruc.trim(),
+        ciudad_principal: form.ciudad_principal.trim() || null,
+        logo_url: form.logo_url || null,
+      });
+      await refrescar();
+      seleccionar(nueva.id);
+      setForm(EMPTY);
+      toast({ title: t("coop_registered") });
+    } catch (err) {
+      const msg =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: unknown }).message)
+          : t("coop_register_error");
+      toast({ title: t("coop_register_error"), description: msg, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header cooperativa */}
-      <div className="flex items-start gap-4">
-        {cooperativa.logo_url ? (
-          <img src={cooperativa.logo_url} alt="logo" className="h-14 w-14 rounded-lg object-contain border" />
-        ) : (
-          <div className="h-14 w-14 rounded-lg bg-primary/10 grid place-items-center">
-            <Bus size={24} className="text-primary" />
-          </div>
-        )}
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">{cooperativa.nombre}</h1>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badgeClass}`}>
-              {t(estadoLabelKey)}
-            </span>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            RUC: {cooperativa.ruc}
-            {cooperativa.ciudad_principal && ` · ${cooperativa.ciudad_principal}`}
-          </p>
-        </div>
-      </div>
+      <h1 className="text-2xl font-bold">{t("coop_page_title")}</h1>
 
-      {/* Tarjetas de estadísticas */}
-      {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          <StatCard icon={Bus} label={t("coop_stat_buses")} value={stats.buses} color="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" />
-          <StatCard icon={Map} label={t("coop_stat_rutas")} value={stats.rutas} color="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400" />
-          <StatCard icon={CalendarClock} label={t("coop_stat_viajes")} value={stats.viajesProgramados} color="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400" />
-          <StatCard icon={Clock} label={t("coop_stat_reservas")} value={stats.reservasPendientes} color="bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" />
-          <StatCard icon={Ticket} label={t("coop_stat_boletos")} value={stats.boletosEmitidos} color="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" />
-        </div>
-      )}
+      {/* Selector de cooperativa activa */}
+      <Card className="p-5 space-y-2 max-w-md">
+        <Label>{t("coop_active_label")}</Label>
+        <Select
+          value={cooperativaActiva ? String(cooperativaActiva.id) : ""}
+          onValueChange={(v) => seleccionar(Number(v))}
+        >
+          <SelectTrigger><SelectValue placeholder={t("coop_select_placeholder")} /></SelectTrigger>
+          <SelectContent>
+            {cooperativas.map((c) => (
+              <SelectItem key={c.id} value={String(c.id)}>{c.nombre}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Card>
 
-      {/* Próximos viajes */}
-      <div>
-        <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
-          <CheckCircle size={16} className="text-primary" />
-          {t("coop_upcoming")}
+      {/* Registro de cooperativa */}
+      <Card className="p-5 space-y-4">
+        <h2 className="font-semibold flex items-center gap-2">
+          <Building2 size={16} className="text-primary" /> {t("coop_register_title")}
         </h2>
-        {proximos.length === 0 ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground p-4 border rounded-lg">
-            <AlertCircle size={16} />
-            {t("coop_no_upcoming")}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <Label>{t("coop_field_name")}</Label>
+            <Input value={form.nombre}
+              onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
           </div>
+          <div className="space-y-1">
+            <Label>{t("coop_field_ruc")}</Label>
+            <Input value={form.ruc} maxLength={13}
+              onChange={(e) => setForm({ ...form, ruc: e.target.value })} />
+          </div>
+          <div className="space-y-1">
+            <Label>{t("coop_field_city")}</Label>
+            <Input value={form.ciudad_principal}
+              onChange={(e) => setForm({ ...form, ciudad_principal: e.target.value })} />
+          </div>
+          <div className="space-y-1">
+            <Label>{t("coop_field_logo")}</Label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={(e) => { handleLogoFile(e.target.files?.[0]); e.target.value = ""; }}
+            />
+            {form.logo_url ? (
+              <div className="flex items-center gap-2">
+                <img src={form.logo_url} alt="logo" className="h-10 w-10 rounded object-contain border" />
+                <Button type="button" variant="outline" size="sm" className="gap-1"
+                  disabled={uploadingLogo}
+                  onClick={() => fileInputRef.current?.click()}>
+                  <Upload size={14} /> {t("buses_upload_change")}
+                </Button>
+                <Button type="button" variant="ghost" size="sm" className="gap-1 text-destructive"
+                  onClick={() => setForm({ ...form, logo_url: "" })}>
+                  <X size={14} />
+                </Button>
+              </div>
+            ) : (
+              <Button type="button" variant="outline" className="w-full gap-2"
+                disabled={uploadingLogo}
+                onClick={() => fileInputRef.current?.click()}>
+                {uploadingLogo
+                  ? <><Loader2 size={16} className="animate-spin" /> {t("buses_upload_uploading")}</>
+                  : <><Upload size={16} /> {t("buses_upload_hint")}</>}
+              </Button>
+            )}
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <Button onClick={handleRegister} disabled={saving}>
+            {saving ? t("coop_registering") : t("coop_register_btn")}
+          </Button>
+        </div>
+      </Card>
+
+      {/* Tabla de cooperativas */}
+      <div>
+        <h2 className="text-base font-semibold mb-3">{t("coop_list_title")}</h2>
+        {cooperativas.length === 0 ? (
+          <div className="text-sm text-muted-foreground p-4 border rounded-lg">{t("coop_empty")}</div>
         ) : (
           <Card className="overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-muted-foreground">
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium">{t("coop_col_route")}</th>
-                  <th className="text-left px-4 py-3 font-medium">{t("coop_col_date")}</th>
-                  <th className="text-left px-4 py-3 font-medium">{t("coop_col_bus")}</th>
-                  <th className="text-right px-4 py-3 font-medium">{t("coop_col_price")}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("coop_col_logo")}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("coop_col_name")}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("coop_col_ruc")}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("coop_col_city")}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("coop_col_state")}</th>
+                  <th className="text-center px-4 py-3 font-medium">{t("coop_col_action")}</th>
                 </tr>
               </thead>
               <tbody>
-                {proximos.map((v, i) => (
-                  <tr key={v.id} className={i % 2 === 0 ? "" : "bg-muted/20"}>
-                    <td className="px-4 py-3 font-medium">
-                      {v.rutas?.ciudad_origen} → {v.rutas?.ciudad_destino}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {new Date(v.fecha_salida).toLocaleString("es-EC", {
-                        day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
-                      })}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{v.buses?.placa ?? "—"}</td>
-                    <td className="px-4 py-3 text-right font-medium">${Number(v.precio_base).toFixed(2)}</td>
-                  </tr>
-                ))}
+                {cooperativas.map((c, i) => {
+                  const activa = cooperativaActiva?.id === c.id;
+                  return (
+                    <tr key={c.id} className={i % 2 === 0 ? "" : "bg-muted/20"}>
+                      <td className="px-4 py-3">
+                        {c.logo_url ? (
+                          <img src={c.logo_url} alt="logo" className="h-8 w-8 rounded object-contain border" />
+                        ) : (
+                          <div className="h-8 w-8 rounded bg-primary/10 grid place-items-center">
+                            <Building2 size={14} className="text-primary" />
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-medium">{c.nombre}</td>
+                      <td className="px-4 py-3 font-mono">{c.ruc}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{c.ciudad_principal ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${estadoBadgeClass[c.estado] ?? estadoBadgeClass.pendiente}`}>
+                          {estadoLabel(c.estado)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {activa ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
+                            <Check size={14} /> {t("coop_active_badge")}
+                          </span>
+                        ) : (
+                          <Button size="sm" variant="outline" onClick={() => seleccionar(c.id)}>
+                            {t("coop_use")}
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </Card>
