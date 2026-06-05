@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Edit,
   Plus,
@@ -32,6 +33,8 @@ const initialForm = {
 };
 
 export default function UsuariosPage() {
+  const { user } = useAuth();
+
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -43,7 +46,12 @@ export default function UsuariosPage() {
     try {
       setLoading(true);
       const data = await usuariosService.getAll();
-      setUsuarios(data);
+
+      const usuariosSinActual = data.filter(
+        (usuario) => String(usuario.id) !== String(user?.id)
+      );
+
+      setUsuarios(usuariosSinActual);
     } catch (error) {
       console.error(error);
       toast.error("No se pudieron cargar los usuarios.");
@@ -53,8 +61,10 @@ export default function UsuariosPage() {
   };
 
   useEffect(() => {
-    cargarUsuarios();
-  }, []);
+    if (user?.id) {
+      cargarUsuarios();
+    }
+  }, [user?.id]);
 
   const usuariosFiltrados = useMemo(() => {
     const term = search.trim().toLowerCase();
