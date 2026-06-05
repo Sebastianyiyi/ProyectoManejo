@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
-import { busService, MARCAS_CHASIS, MARCAS_CARROCERIA } from "@/lib/busService";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { busService, subirFotoBus, MARCAS_CHASIS, MARCAS_CARROCERIA } from "@/lib/busService";
 import type { Bus, BusInsert, TipoBus } from "@/lib/busService";
 import { validarPlacaEcuador } from "@/lib/placa";
 import { useLang } from "@/contexts/LanguageContext";
@@ -19,11 +19,11 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Pencil, Trash2, Power, Image as ImageIcon } from "lucide-react";
+import { PlusCircle, Pencil, Trash2, Power, Image as ImageIcon, Upload, X, Loader2 } from "lucide-react";
 
-const EMPTY_FORM: Omit<BusInsert, "cooperativa_id"> = {
+const EMPTY_FORM: Omit<BusInsert, "cooperativa_id" | "numero"> = {
   placa: "",
-  numero: "",
+  nombre: "",
   capacidad: 40,
   tipo: "economico",
   marca_chasis: "",
@@ -47,6 +47,8 @@ export default function BusesPage() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [uploadingFoto, setUploadingFoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchBuses = useCallback(async () => {
     try {
@@ -76,7 +78,7 @@ export default function BusesPage() {
     setEditingBus(bus);
     setForm({
       placa: bus.placa,
-      numero: bus.numero ?? "",
+      nombre: bus.nombre ?? "",
       capacidad: bus.capacidad,
       tipo: bus.tipo,
       marca_chasis: bus.marca_chasis ?? "",
@@ -96,8 +98,8 @@ export default function BusesPage() {
       toast({ title: t("buses_plate_invalid"), variant: "destructive" });
       return;
     }
-    // Normaliza el número de flota: vacío se guarda como null.
-    const payload = { ...form, numero: form.numero?.trim() || null };
+    // El nombre vacío se guarda como null.
+    const payload = { ...form, nombre: form.nombre?.trim() || null };
     try {
       setSaving(true);
       if (editingBus) {
@@ -114,6 +116,24 @@ export default function BusesPage() {
       toast({ title: t("buses_error_save"), description: msg, variant: "destructive" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleFotoFile = async (file: File | undefined | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: t("buses_upload_invalid"), variant: "destructive" });
+      return;
+    }
+    try {
+      setUploadingFoto(true);
+      const url = await subirFotoBus(file);
+      setForm((prev) => ({ ...prev, foto_url: url }));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t("buses_upload_error");
+      toast({ title: t("buses_upload_error"), description: msg, variant: "destructive" });
+    } finally {
+      setUploadingFoto(false);
     }
   };
 
@@ -186,6 +206,7 @@ export default function BusesPage() {
                   {[
                     { label: t("buses_col_num"), center: false },
                     { label: t("buses_col_plate"), center: false },
+                    { label: t("buses_col_name"), center: false },
                     { label: t("buses_col_type"), center: false },
                     { label: t("buses_col_capacity"), center: false },
                     { label: t("buses_col_chassis"), center: false },
@@ -208,6 +229,7 @@ export default function BusesPage() {
                   <tr key={bus.id} className={`border-b last:border-0 ${i % 2 === 0 ? "" : "bg-muted/20"}`}>
                     <td className="px-4 py-3 font-mono">{bus.numero ?? "—"}</td>
                     <td className="px-4 py-3 font-mono font-semibold">{bus.placa}</td>
+                    <td className="px-4 py-3">{bus.nombre ?? "—"}</td>
                     <td className="px-4 py-3 capitalize">{bus.tipo}</td>
                     <td className="px-4 py-3">{bus.capacidad}</td>
                     <td className="px-4 py-3">{bus.marca_chasis ?? "—"}</td>
@@ -279,10 +301,10 @@ export default function BusesPage() {
                 onChange={(e) => setForm({ ...form, placa: e.target.value.toUpperCase() })} />
             </div>
             <div className="space-y-1">
-              <Label>{t("buses_label_number")}</Label>
-              <Input placeholder={t("buses_number_placeholder")}
-                value={form.numero ?? ""}
-                onChange={(e) => setForm({ ...form, numero: e.target.value })} />
+              <Label>{t("buses_label_name")}</Label>
+              <Input placeholder={t("buses_name_placeholder")}
+                value={form.nombre ?? ""}
+                onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
             </div>
             <div className="space-y-1">
               <Label>{t("buses_label_type")}</Label>
@@ -332,9 +354,61 @@ export default function BusesPage() {
             </div>
             <div className="col-span-2 space-y-1">
               <Label>{t("buses_label_photo")}</Label>
-              <Input placeholder="https://..."
-                value={form.foto_url ?? ""}
-                onChange={(e) => setForm({ ...form, foto_url: e.target.value })} />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  handleFotoFile(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+              {form.foto_url ? (
+                <div className="relative rounded-md border bg-muted/20 p-2">
+                  <img
+                    src={form.foto_url}
+                    alt="bus"
+                    className="mx-auto max-h-40 object-contain rounded"
+                  />
+                  <div className="flex justify-center gap-2 mt-2">
+                    <Button type="button" variant="outline" size="sm" className="gap-1"
+                      disabled={uploadingFoto}
+                      onClick={() => fileInputRef.current?.click()}>
+                      <Upload size={14} /> {t("buses_upload_change")}
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" className="gap-1 text-destructive"
+                      onClick={() => setForm({ ...form, foto_url: "" })}>
+                      <X size={14} /> {t("buses_upload_remove")}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={uploadingFoto}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    handleFotoFile(e.dataTransfer.files?.[0]);
+                  }}
+                  className="w-full flex flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed bg-muted/10 py-6 text-muted-foreground hover:bg-muted/20 transition-colors disabled:opacity-60"
+                >
+                  {uploadingFoto ? (
+                    <>
+                      <Loader2 size={20} className="animate-spin" />
+                      <span className="text-sm">{t("buses_upload_uploading")}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={20} />
+                      <span className="text-sm">{t("buses_upload_hint")}</span>
+                      <span className="text-xs">{t("buses_upload_formats")}</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
           <DialogFooter>

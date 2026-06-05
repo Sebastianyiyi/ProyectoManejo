@@ -7,6 +7,7 @@ export interface Bus {
   cooperativa_id: number;
   placa: string;
   numero: string | null;
+  nombre: string | null;
   capacidad: number;
   tipo: TipoBus;
   marca_chasis: string | null;
@@ -64,7 +65,8 @@ export const busService = {
     return data as Bus[];
   },
 
-  async create(bus: Omit<BusInsert, "cooperativa_id">): Promise<Bus> {
+  // El campo "numero" lo autogenera la base de datos, por eso se omite aquí.
+  async create(bus: Omit<BusInsert, "cooperativa_id" | "numero">): Promise<Bus> {
     const { data, error } = await supabase
       .from("buses")
       .insert({ ...bus, cooperativa_id: COOPERATIVA_ID })
@@ -98,3 +100,18 @@ export const busService = {
     if (error) throw error;
   },
 };
+
+// Sube una foto de bus al bucket público "buses" y devuelve su URL pública.
+export async function subirFotoBus(archivo: File): Promise<string> {
+  const extension = archivo.name.split(".").pop();
+  const nombreArchivo = `fotos/bus_${Date.now()}.${extension}`;
+
+  const { error } = await supabase.storage
+    .from("buses")
+    .upload(nombreArchivo, archivo, { upsert: true });
+
+  if (error) throw new Error("Error subiendo la foto: " + error.message);
+
+  const { data } = supabase.storage.from("buses").getPublicUrl(nombreArchivo);
+  return data.publicUrl;
+}
