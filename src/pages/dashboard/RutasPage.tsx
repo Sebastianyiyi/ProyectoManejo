@@ -5,6 +5,8 @@ import { frecuenciasService } from "@/lib/frecuenciasService";
 import type { Frecuencia } from "@/lib/frecuenciasService";
 import { busService } from "@/lib/busService";
 import type { Bus } from "@/lib/busService";
+import { usuariosService } from "@/lib/usuariosService";
+import type { Usuario } from "@/lib/usuariosService";
 import { useLang } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +43,7 @@ const ESTADO_BADGE: Record<string, string> = {
 interface FormState {
   frecuencia_id: string;
   bus_id: string;
+  chofer_id: string;
   fecha: string;        // YYYY-MM-DD
   hora_salida: string;  // HH:MM (prellenada desde frecuencia)
   precio_base: string;
@@ -49,6 +52,7 @@ interface FormState {
 const EMPTY_FORM: FormState = {
   frecuencia_id: "",
   bus_id: "",
+  chofer_id: "",
   fecha: "",
   hora_salida: "",
   precio_base: "",
@@ -61,6 +65,7 @@ export default function RutasPage() {
   const [viajes, setViajes] = useState<ViajeConFrecuencia[]>([]);
   const [frecuencias, setFrecuencias] = useState<Frecuencia[]>([]);
   const [buses, setBuses] = useState<Bus[]>([]);
+  const [choferes, setChoferes] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
@@ -75,14 +80,16 @@ export default function RutasPage() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [v, f, b] = await Promise.all([
+      const [v, f, b, u] = await Promise.all([
         viajesService.getAll(),
         frecuenciasService.getAll(),
         busService.getAll(),
+        usuariosService.getAll(),
       ]);
       setViajes(v);
       setFrecuencias(f.filter((fr) => fr.activo));
       setBuses(b.filter((bus) => bus.activo));
+      setChoferes(u.filter((user) => user.rol === "chofer"));
     } catch {
       toast({ title: "Error al cargar los viajes", variant: "destructive" });
     } finally {
@@ -116,6 +123,7 @@ export default function RutasPage() {
     setForm({
       frecuencia_id: String(v.frecuencia_id ?? ""),
       bus_id: String(v.bus_id),
+      chofer_id: v.chofer_id ? String(v.chofer_id) : "",
       fecha,
       hora_salida: hora,
       precio_base: String(v.precio_base),
@@ -135,7 +143,7 @@ export default function RutasPage() {
   // ─── Guardar viaje ───────────────────────────────────────────────────────────
 
   const handleSave = async () => {
-    if (!form.frecuencia_id || !form.bus_id || !form.fecha || !form.precio_base) {
+    if (!form.frecuencia_id || !form.bus_id || !form.fecha || !form.precio_base || !form.chofer_id) {
       toast({ title: "Todos los campos son obligatorios", variant: "destructive" });
       return;
     }
@@ -151,6 +159,7 @@ export default function RutasPage() {
         await viajesService.update(editingViaje.id, {
           frecuencia_id: parseInt(form.frecuencia_id),
           bus_id: parseInt(form.bus_id),
+          chofer_id: parseInt(form.chofer_id),
           fecha_salida: fechaSalida,
           precio_base: precio,
         });
@@ -159,6 +168,7 @@ export default function RutasPage() {
         await viajesService.create({
           frecuencia_id: parseInt(form.frecuencia_id),
           bus_id: parseInt(form.bus_id),
+          chofer_id: parseInt(form.chofer_id),
           fecha_salida: fechaSalida,
           precio_base: precio,
         });
@@ -245,7 +255,7 @@ export default function RutasPage() {
             <table className="w-full text-sm">
               <thead className="border-b bg-muted/40">
                 <tr>
-                  {["ID", "Ruta (frecuencia)", "Bus", "Fecha y hora", "Precio", "Estado", "Acciones"].map((h) => (
+                  {["ID", "Ruta (frecuencia)", "Bus", "Chofer", "Fecha y hora", "Precio", "Estado", "Acciones"].map((h) => (
                     <th
                       key={h}
                       className={`px-4 py-3 font-medium text-muted-foreground whitespace-nowrap ${h === "Acciones" ? "text-center" : "text-left"}`}
@@ -259,6 +269,7 @@ export default function RutasPage() {
                 {filtered.map((v, i) => {
                   const frec = v.frecuencias;
                   const bus = v.buses;
+                  const chofer = v.chofer;
                   const fechaLocal = new Date(v.fecha_salida).toLocaleString("es-EC", {
                     dateStyle: "medium", timeStyle: "short",
                   });
@@ -283,6 +294,13 @@ export default function RutasPage() {
                             </Badge>
                           </span>
                         ) : <span className="text-muted-foreground">—</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        {chofer ? (
+                          <span className="font-medium">{chofer.full_name}</span>
+                        ) : (
+                          <span className="text-muted-foreground italic">Sin asignar</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <span className="flex items-center gap-1.5">
@@ -362,6 +380,23 @@ export default function RutasPage() {
                   {buses.map((b) => (
                     <SelectItem key={b.id} value={String(b.id)}>
                       {b.placa} — {TIPO_LABEL[b.tipo] ?? b.tipo} (cap. {b.capacidad})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Chofer */}
+            <div className="space-y-2">
+              <Label>Chofer *</Label>
+              <Select value={form.chofer_id} onValueChange={(v) => setForm({ ...form, chofer_id: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un chofer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {choferes.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.full_name} ({c.email})
                     </SelectItem>
                   ))}
                 </SelectContent>
