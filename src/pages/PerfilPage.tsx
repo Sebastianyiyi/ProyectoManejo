@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LanguageContext";
@@ -8,17 +8,62 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Upload, CheckCircle2, XCircle, Loader2, ShieldCheck } from "lucide-react";
 
+// ─── OCR via Supabase Edge Function (Gemini 2.5 Flash) ────────────────────────
+async function analizarCedulaConGemini(base64: string, mimeType: string): Promise<{
+  tieneDiscapacidad: boolean;
+  confianza: "alta" | "media" | "baja";
+  detalle: string;
+}> {
+  // Invocamos la función segura que creaste en el panel de Supabase
+  const { data, error } = await supabase.functions.invoke('analizar-cedula', {
+    body: { base64, mimeType }
+  });
+
+  if (error) {
+    console.error("Error en Edge Function:", error);
+    throw error;
+  }
+
+  // Como configuramos Gemini para responder en JSON, 'data' ya viene parseado como objeto
+  return data;
+}
+
+// ─── Convertir File a base64 ───────────────────────────────────────────────────
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve((reader.result as string).split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ─── Componente principal ──────────────────────────────────────────────────────
 export default function PerfilPage() {
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useLang();
   const [name, setName] = useState(user?.name ?? "");
   const [saving, setSaving] = useState(false);
 
+  // Estado OCR cédula
+  const [cedulaFile, setCedulaFile] = useState<File | null>(null);
+  const [cedulaPreview, setCedulaPreview] = useState<string | null>(null);
+  const [analizando, setAnalizando] = useState(false);
+  const [resultadoOCR, setResultadoOCR] = useState<{
+    tieneDiscapacidad: boolean;
+    confianza: "alta" | "media" | "baja";
+    detalle: string;
+  } | null>(null);
+  const [discapacidadGuardada, setDiscapacidadGuardada] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   if (!user) return <Navigate to="/auth" replace />;
+
+  const isPassenger = hasRole("passenger");
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -42,6 +87,65 @@ export default function PerfilPage() {
     }
   };
 
+  const handleCedulaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCedulaFile(file);
+    setCedulaPreview(URL.createObjectURL(file));
+    setResultadoOCR(null);
+    setDiscapacidadGuardada(false);
+  };
+
+  const handleAnalizarCedula = async () => {
+    if (!cedulaFile) return;
+    try {
+      setAnalizando(true);
+      setResultadoOCR(null);
+      const base64 = await fileToBase64(cedulaFile);
+      const mimeType = cedulaFile.type;
+      
+      // Llamada a la nueva función de Gemini
+      const resultado = await analizarCedulaConGemini(base64, mimeType);
+      setResultadoOCR(resultado);
+    } catch (err) {
+      toast({
+        title: "Error al analizar la cédula",
+        description: "No se pudo procesar la imagen con Gemini. Intenta con una foto más clara.",
+        variant: "destructive",
+      });
+    } finally {
+      setAnalizando(false);
+    }
+  };
+
+  const handleGuardarDiscapacidad = async () => {
+    if (!resultadoOCR || !user.id) return;
+    try {
+      const { error } = await supabase
+        .from("usuarios")
+        .update({ tiene_discapacidad: resultadoOCR.tieneDiscapacidad })
+        .eq("id", user.id);
+      if (error) throw error;
+      setDiscapacidadGuardada(true);
+      toast({
+        title: resultadoOCR.tieneDiscapacidad
+          ? "✅ Descuento por discapacidad activado"
+          : "Información actualizada",
+        description: resultadoOCR.tieneDiscapacidad
+          ? "Se aplicará el 50% de descuento en tus próximas compras."
+          : "No se detectó discapacidad registrada en la cédula.",
+      });
+    } catch {
+      toast({ title: "Error al guardar", variant: "destructive" });
+    }
+  };
+
+  const confianzaColor = {
+    alta: "text-green-600",
+    media: "text-yellow-600",
+    baja: "text-red-500",
+  };
+
   return (
     <div className="p-6 space-y-6 max-w-md mx-auto">
       <div className="flex items-center gap-3">
@@ -51,6 +155,7 @@ export default function PerfilPage() {
         <h1 className="text-xl font-bold">{t("perfil_title")}</h1>
       </div>
 
+      {/* ── Datos básicos ───────────────────────────── */}
       <Card className="p-6 space-y-4">
         <div className="space-y-1">
           <Label>{t("perfil_email")}</Label>
@@ -73,6 +178,131 @@ export default function PerfilPage() {
           </Button>
         </div>
       </Card>
+
+      {/* ── Verificación discapacidad (solo pasajeros) ── */}
+      {isPassenger && (
+        <Card className="p-6 space-y-4">
+          <div className="flex items-center gap-2 mb-1">
+            <ShieldCheck size={18} className="text-primary" />
+            <h2 className="font-semibold text-base">Verificación de Discapacidad</h2>
+          </div>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Sube una foto de tu cédula ecuatoriana. Detectaremos automáticamente si tienes
+            discapacidad registrada y activaremos el <strong>50% de descuento</strong> en tus
+            boletos.
+          </p>
+
+          {/* Area de carga/Upload */}
+          <div
+            className="border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {cedulaPreview ? (
+              <img
+                src={cedulaPreview}
+                alt="Vista previa cédula"
+                className="max-h-40 mx-auto rounded object-contain"
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-2 py-4 text-muted-foreground">
+                <Upload size={28} />
+                <span className="text-sm font-medium">Haz clic para subir tu cédula</span>
+                <span className="text-xs">JPG, PNG o WEBP · máx. 5MB</span>
+              </div>
+            )}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleCedulaChange}
+          />
+
+          {/* Botón analizar */}
+          {cedulaFile && !resultadoOCR && (
+            <Button
+              onClick={handleAnalizarCedula}
+              disabled={analizando}
+              className="w-full gap-2"
+            >
+              {analizando ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Analizando cédula con Gemini…
+                </>
+              ) : (
+                <>
+                  <ShieldCheck size={16} />
+                  Analizar cédula
+                </>
+              )}
+            </Button>
+          )}
+
+          {/* Resultado OCR */}
+          {resultadoOCR && (
+            <div
+              className={`rounded-lg border p-4 space-y-2 ${
+                resultadoOCR.tieneDiscapacidad
+                  ? "bg-green-50 border-green-200"
+                  : "bg-muted/40 border-border"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                {resultadoOCR.tieneDiscapacidad ? (
+                  <CheckCircle2 size={18} className="text-green-600 shrink-0" />
+                ) : (
+                  <XCircle size={18} className="text-muted-foreground shrink-0" />
+                )}
+                <span className="font-medium text-sm">
+                  {resultadoOCR.tieneDiscapacidad
+                    ? "Discapacidad detectada — 50% de descuento"
+                    : "No se detectó discapacidad en la cédula"}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground pl-6">{resultadoOCR.detalle}</p>
+              <p className={`text-xs pl-6 font-medium ${confianzaColor[resultadoOCR.confianza]}`}>
+                Confianza del análisis: {resultadoOCR.confianza}
+              </p>
+
+              {!discapacidadGuardada ? (
+                <Button
+                  size="sm"
+                  className="w-full mt-2"
+                  onClick={handleGuardarDiscapacidad}
+                  variant={resultadoOCR.tieneDiscapacidad ? "default" : "outline"}
+                >
+                  {resultadoOCR.tieneDiscapacidad
+                    ? "Activar descuento"
+                    : "Confirmar sin descuento"}
+                </Button>
+              ) : (
+                <div className="flex items-center gap-2 pt-1 pl-6 text-green-600 text-sm font-medium">
+                  <CheckCircle2 size={14} />
+                  Guardado correctamente
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Cambiar imagen si ya hay resultado */}
+          {resultadoOCR && (
+            <button
+              className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground w-full text-center"
+              onClick={() => {
+                setCedulaFile(null);
+                setCedulaPreview(null);
+                setResultadoOCR(null);
+                setDiscapacidadGuardada(false);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+              }}
+            >
+              Subir otra imagen
+            </button>
+          )}
+        </Card>
+      )}
     </div>
   );
 }
