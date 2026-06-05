@@ -122,16 +122,89 @@ export default function BusesPage() {
   const [uploadingFoto, setUploadingFoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Dynamic lists of brands initialized from defaults and localStorage
+  const [chasisBrands, setChasisBrands] = useState<string[]>(() => {
+    const stored = typeof window !== "undefined" ? localStorage.getItem("custom_marcas_chasis") : null;
+    const custom = stored ? JSON.parse(stored) : [];
+    return Array.from(new Set([...MARCAS_CHASIS, ...custom]));
+  });
+  const [carroceriaBrands, setCarroceriaBrands] = useState<string[]>(() => {
+    const stored = typeof window !== "undefined" ? localStorage.getItem("custom_marcas_carroceria") : null;
+    const custom = stored ? JSON.parse(stored) : [];
+    return Array.from(new Set([...MARCAS_CARROCERIA, ...custom]));
+  });
+
+  // Dialog state for adding a new brand
+  const [newBrandModalOpen, setNewBrandModalOpen] = useState(false);
+  const [newBrandType, setNewBrandType] = useState<"chasis" | "carroceria" | null>(null);
+  const [newBrandName, setNewBrandName] = useState("");
+
   const fetchBuses = useCallback(async () => {
     try {
       const data = await busService.getAll();
       setBuses(data);
+
+      // Extract unique brands from Supabase buses
+      const dbChasis = data.map((b) => b.marca_chasis).filter(Boolean) as string[];
+      const dbCarroceria = data.map((b) => b.marca_carroceria).filter(Boolean) as string[];
+
+      // Fetch custom brands from localStorage
+      const storedChasis = localStorage.getItem("custom_marcas_chasis");
+      const customChasis = storedChasis ? JSON.parse(storedChasis) : [];
+
+      const storedCarroceria = localStorage.getItem("custom_marcas_carroceria");
+      const customCarroceria = storedCarroceria ? JSON.parse(storedCarroceria) : [];
+
+      // Combine all unique brands
+      setChasisBrands(Array.from(new Set([...MARCAS_CHASIS, ...dbChasis, ...customChasis])));
+      setCarroceriaBrands(Array.from(new Set([...MARCAS_CARROCERIA, ...dbCarroceria, ...customCarroceria])));
     } catch {
       toast({ title: t("buses_error_load"), variant: "destructive" });
     } finally {
       setLoading(false);
     }
   }, [toast, t]);
+
+  const openAddBrandModal = (type: "chasis" | "carroceria") => {
+    setNewBrandType(type);
+    setNewBrandName("");
+    setNewBrandModalOpen(true);
+  };
+
+  const handleAddBrand = () => {
+    const trimmed = newBrandName.trim();
+    if (!trimmed) {
+      toast({ title: t("buses_add_brand_empty"), variant: "destructive" });
+      return;
+    }
+
+    if (newBrandType === "chasis") {
+      if (chasisBrands.some((b) => b.toLowerCase() === trimmed.toLowerCase())) {
+        toast({ title: t("buses_add_brand_exists"), variant: "destructive" });
+        return;
+      }
+      const newBrands = [...chasisBrands, trimmed];
+      setChasisBrands(newBrands);
+      const stored = localStorage.getItem("custom_marcas_chasis");
+      const custom = stored ? JSON.parse(stored) : [];
+      localStorage.setItem("custom_marcas_chasis", JSON.stringify(Array.from(new Set([...custom, trimmed]))));
+      setForm((prev) => ({ ...prev, marca_chasis: trimmed }));
+    } else if (newBrandType === "carroceria") {
+      if (carroceriaBrands.some((b) => b.toLowerCase() === trimmed.toLowerCase())) {
+        toast({ title: t("buses_add_brand_exists"), variant: "destructive" });
+        return;
+      }
+      const newBrands = [...carroceriaBrands, trimmed];
+      setCarroceriaBrands(newBrands);
+      const stored = localStorage.getItem("custom_marcas_carroceria");
+      const custom = stored ? JSON.parse(stored) : [];
+      localStorage.setItem("custom_marcas_carroceria", JSON.stringify(Array.from(new Set([...custom, trimmed]))));
+      setForm((prev) => ({ ...prev, marca_carroceria: trimmed }));
+    }
+
+    setNewBrandModalOpen(false);
+    toast({ title: t("buses_add_brand_success") });
+  };
 
   useEffect(() => { fetchBuses(); }, [fetchBuses, cooperativa?.id]);
 
@@ -409,32 +482,60 @@ export default function BusesPage() {
 
               <div className="space-y-1">
                 <Label>{t("buses_label_chassis")}</Label>
-                <Select
-                  value={form.marca_chasis ?? ""}
-                  onValueChange={(v) => setForm({ ...form, marca_chasis: v })}
-                >
-                  <SelectTrigger><SelectValue placeholder={t("buses_select_brand")} /></SelectTrigger>
-                  <SelectContent>
-                    {MARCAS_CHASIS.map((marca) => (
-                      <SelectItem key={marca} value={marca}>{marca}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Select
+                      value={form.marca_chasis ?? ""}
+                      onValueChange={(v) => setForm({ ...form, marca_chasis: v })}
+                    >
+                      <SelectTrigger className="w-full"><SelectValue placeholder={t("buses_select_brand")} /></SelectTrigger>
+                      <SelectContent>
+                        {chasisBrands.map((marca) => (
+                          <SelectItem key={marca} value={marca}>{marca}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => openAddBrandModal("chasis")}
+                    className="shrink-0"
+                    title={t("buses_add_brand_title_chasis")}
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-1">
                 <Label>{t("buses_label_body")}</Label>
-                <Select
-                  value={form.marca_carroceria ?? ""}
-                  onValueChange={(v) => setForm({ ...form, marca_carroceria: v })}
-                >
-                  <SelectTrigger><SelectValue placeholder={t("buses_select_brand")} /></SelectTrigger>
-                  <SelectContent>
-                    {MARCAS_CARROCERIA.map((marca) => (
-                      <SelectItem key={marca} value={marca}>{marca}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Select
+                      value={form.marca_carroceria ?? ""}
+                      onValueChange={(v) => setForm({ ...form, marca_carroceria: v })}
+                    >
+                      <SelectTrigger className="w-full"><SelectValue placeholder={t("buses_select_brand")} /></SelectTrigger>
+                      <SelectContent>
+                        {carroceriaBrands.map((marca) => (
+                          <SelectItem key={marca} value={marca}>{marca}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => openAddBrandModal("carroceria")}
+                    className="shrink-0"
+                    title={t("buses_add_brand_title_body")}
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
               <div className="col-span-2 space-y-1">
@@ -542,7 +643,43 @@ export default function BusesPage() {
         </DialogContent>
       </Dialog>
 
-
+      {/* Dialog para agregar una nueva marca */}
+      <Dialog open={newBrandModalOpen} onOpenChange={setNewBrandModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              {newBrandType === "chasis"
+                ? t("buses_add_brand_title_chasis")
+                : t("buses_add_brand_title_body")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-brand-name-input">{t("buses_add_brand_label")}</Label>
+              <Input
+                id="new-brand-name-input"
+                placeholder={t("buses_add_brand_placeholder")}
+                value={newBrandName}
+                onChange={(e) => setNewBrandName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleAddBrand();
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewBrandModalOpen(false)}>
+              {t("buses_cancel")}
+            </Button>
+            <Button onClick={handleAddBrand}>
+              {t("buses_add_brand_btn")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
