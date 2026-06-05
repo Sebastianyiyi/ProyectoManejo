@@ -17,6 +17,7 @@ export function Layout() {
   const { t } = useLang();
   const isAdmin = user?.role === "administrador";
   const isOficinista = user?.role === "oficinista";
+  const isChofer = user?.role === "chofer";
 
   const handleSignOut = async () => {
     await signOut();
@@ -25,13 +26,13 @@ export function Layout() {
 
   const navLinks = (
     <>
-      {!isAdmin && !isOficinista && (
+      {!isAdmin && !isOficinista && !isChofer && (
         <NavLink to="/buscar" className={({ isActive }) =>
           `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-foreground/70 hover:text-foreground'}`
         }>{t("nav_search")}</NavLink>
       )}
 
-      {user && !isAdmin && !isOficinista && (
+      {user && !isAdmin && !isOficinista && !isChofer && (
         <NavLink to="/mis-reservas" className={({ isActive }) =>
           `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-foreground/70 hover:text-foreground'}`
         }>{t("nav_reservations")}</NavLink>
@@ -77,7 +78,7 @@ export function Layout() {
                       <DropdownMenuSeparator />
                     </>
                   )}
-                  {!isAdmin && !isOficinista && (
+                  {!isAdmin && !isOficinista && !isChofer && (
                     <DropdownMenuItem onClick={() => navigate('/mis-reservas')}>{t("nav_reservations")}</DropdownMenuItem>
                   )}
                   <DropdownMenuItem onClick={() => navigate('/configuracion')}>
