@@ -10,27 +10,42 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Upload, CheckCircle2, XCircle, Loader2, ShieldCheck } from "lucide-react";
 
-// ─── OCR via Supabase Edge Function (Gemini 2.5 Flash) ────────────────────────
-async function analizarCedulaConGemini(base64: string, mimeType: string): Promise<{
+// ─── Tipos ─────────────────────────────────────────────────────────────────────
+interface GeminiResult {
+  esCedulaEcuatoriana: boolean;
   tieneDiscapacidad: boolean;
   confianza: "alta" | "media" | "baja";
   detalle: string;
-}> {
-  // Invocamos la función segura que creaste en el panel de Supabase
-  const { data, error } = await supabase.functions.invoke('analizar-cedula', {
-    body: { base64, mimeType }
-  });
-
-  if (error) {
-    console.error("Error en Edge Function:", error);
-    throw error;
-  }
-
-  // Como configuramos Gemini para responder en JSON, 'data' ya viene parseado como objeto
-  return data;
 }
 
-// ─── Convertir File a base64 ───────────────────────────────────────────────────
+// ─── OCR via Supabase Edge Function (Gemini 2.5 Flash) ─────────────────────────
+async function analizarCedulaConGemini(base64: string, mimeType: string): Promise<GeminiResult> {
+  const { data, error } = await supabase.functions.invoke("analizar-cedula", {
+    body: { base64, mimeType },
+  });
+
+  // En 422 (no es cédula ecuatoriana), el SDK puede poner el body en error.context
+  // dependiendo de la versión. Intentamos extraerlo de ambos lugares.
+  if (error && !data) {
+    // Intentar parsear desde error.context si existe
+    try {
+      const contextData =
+        typeof error.context?.json === "function"
+          ? await error.context.json()
+          : null;
+      if (contextData && typeof contextData.esCedulaEcuatoriana === "boolean") {
+        return contextData as GeminiResult;
+      }
+    } catch {
+      // context no era JSON parseable
+    }
+    throw new Error("No se pudo conectar con el servidor de análisis.");
+  }
+
+  return data as GeminiResult;
+}
+
+// ─── Convertir File a base64 ────────────────────────────────────────────────────
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -40,7 +55,7 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-// ─── Componente principal ──────────────────────────────────────────────────────
+// ─── Componente principal ───────────────────────────────────────────────────────
 export default function PerfilPage() {
   const { user, hasRole } = useAuth();
   const navigate = useNavigate();
@@ -53,11 +68,7 @@ export default function PerfilPage() {
   const [cedulaFile, setCedulaFile] = useState<File | null>(null);
   const [cedulaPreview, setCedulaPreview] = useState<string | null>(null);
   const [analizando, setAnalizando] = useState(false);
-  const [resultadoOCR, setResultadoOCR] = useState<{
-    tieneDiscapacidad: boolean;
-    confianza: "alta" | "media" | "baja";
-    detalle: string;
-  } | null>(null);
+  const [resultadoOCR, setResultadoOCR] = useState<GeminiResult | null>(null);
   const [discapacidadGuardada, setDiscapacidadGuardada] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,6 +76,7 @@ export default function PerfilPage() {
 
   const isPassenger = hasRole("passenger");
 
+  // ── Guardar nombre ────────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!name.trim()) {
       toast({ title: t("perfil_name_required"), variant: "destructive" });
@@ -87,6 +99,7 @@ export default function PerfilPage() {
     }
   };
 
+  // ── Selección de imagen ───────────────────────────────────────────────────────
   const handleCedulaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -96,21 +109,33 @@ export default function PerfilPage() {
     setDiscapacidadGuardada(false);
   };
 
+  // ── Análisis con Gemini ───────────────────────────────────────────────────────
   const handleAnalizarCedula = async () => {
     if (!cedulaFile) return;
     try {
       setAnalizando(true);
       setResultadoOCR(null);
       const base64 = await fileToBase64(cedulaFile);
-      const mimeType = cedulaFile.type;
-      
-      // Llamada a la nueva función de Gemini
+      // Fallback explícito: string vacío también se reemplaza
+      const mimeType = cedulaFile.type || "image/jpeg";
+
       const resultado = await analizarCedulaConGemini(base64, mimeType);
       setResultadoOCR(resultado);
-    } catch (err) {
+
+      if (!resultado.esCedulaEcuatoriana) {
+        toast({
+          title: "Documento no válido",
+          description:
+            resultado.detalle ??
+            "La imagen no corresponde a una cédula ecuatoriana. Por favor sube una foto de tu cédula de identidad.",
+          variant: "destructive",
+        });
+      }
+    } catch {
       toast({
         title: "Error al analizar la cédula",
-        description: "No se pudo procesar la imagen con Gemini. Intenta con una foto más clara.",
+        description:
+          "No se pudo procesar la imagen. Intenta con una foto más clara o revisa tu conexión.",
         variant: "destructive",
       });
     } finally {
@@ -118,6 +143,7 @@ export default function PerfilPage() {
     }
   };
 
+  // ── Guardar resultado en DB ───────────────────────────────────────────────────
   const handleGuardarDiscapacidad = async () => {
     if (!resultadoOCR || !user.id) return;
     try {
@@ -140,12 +166,22 @@ export default function PerfilPage() {
     }
   };
 
-  const confianzaColor = {
+  // ── Resetear sección cédula ───────────────────────────────────────────────────
+  const handleReset = () => {
+    setCedulaFile(null);
+    setCedulaPreview(null);
+    setResultadoOCR(null);
+    setDiscapacidadGuardada(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const confianzaColor: Record<GeminiResult["confianza"], string> = {
     alta: "text-green-600",
     media: "text-yellow-600",
     baja: "text-red-500",
   };
 
+  // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <div className="p-6 space-y-6 max-w-md mx-auto">
       <div className="flex items-center gap-3">
@@ -155,13 +191,12 @@ export default function PerfilPage() {
         <h1 className="text-xl font-bold">{t("perfil_title")}</h1>
       </div>
 
-      {/* ── Datos básicos ───────────────────────────── */}
+      {/* ── Datos básicos ──────────────────────────────────────────────────────── */}
       <Card className="p-6 space-y-4">
         <div className="space-y-1">
           <Label>{t("perfil_email")}</Label>
           <Input value={user.email} readOnly className="bg-muted/40 cursor-default" />
         </div>
-
         <div className="space-y-1">
           <Label>{t("perfil_name")}</Label>
           <Input
@@ -170,7 +205,6 @@ export default function PerfilPage() {
             placeholder={t("perfil_name_placeholder")}
           />
         </div>
-
         <div className="flex justify-end pt-1">
           <Button onClick={handleSave} disabled={saving} className="gap-2">
             <Save size={16} />
@@ -179,7 +213,7 @@ export default function PerfilPage() {
         </div>
       </Card>
 
-      {/* ── Verificación discapacidad (solo pasajeros) ── */}
+      {/* ── Verificación discapacidad (solo pasajeros) ─────────────────────────── */}
       {isPassenger && (
         <Card className="p-6 space-y-4">
           <div className="flex items-center gap-2 mb-1">
@@ -192,7 +226,7 @@ export default function PerfilPage() {
             boletos.
           </p>
 
-          {/* Area de carga/Upload */}
+          {/* Área de carga */}
           <div
             className="border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
             onClick={() => fileInputRef.current?.click()}
@@ -221,11 +255,7 @@ export default function PerfilPage() {
 
           {/* Botón analizar */}
           {cedulaFile && !resultadoOCR && (
-            <Button
-              onClick={handleAnalizarCedula}
-              disabled={analizando}
-              className="w-full gap-2"
-            >
+            <Button onClick={handleAnalizarCedula} disabled={analizando} className="w-full gap-2">
               {analizando ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
@@ -244,19 +274,27 @@ export default function PerfilPage() {
           {resultadoOCR && (
             <div
               className={`rounded-lg border p-4 space-y-2 ${
-                resultadoOCR.tieneDiscapacidad
+                resultadoOCR.esCedulaEcuatoriana && resultadoOCR.tieneDiscapacidad
                   ? "bg-green-50 border-green-200"
-                  : "bg-muted/40 border-border"
+                  : resultadoOCR.esCedulaEcuatoriana
+                  ? "bg-muted/40 border-border"
+                  : "bg-red-50 border-red-200"
               }`}
             >
               <div className="flex items-center gap-2">
-                {resultadoOCR.tieneDiscapacidad ? (
-                  <CheckCircle2 size={18} className="text-green-600 shrink-0" />
+                {resultadoOCR.esCedulaEcuatoriana ? (
+                  resultadoOCR.tieneDiscapacidad ? (
+                    <CheckCircle2 size={18} className="text-green-600 shrink-0" />
+                  ) : (
+                    <XCircle size={18} className="text-muted-foreground shrink-0" />
+                  )
                 ) : (
-                  <XCircle size={18} className="text-muted-foreground shrink-0" />
+                  <XCircle size={18} className="text-red-500 shrink-0" />
                 )}
                 <span className="font-medium text-sm">
-                  {resultadoOCR.tieneDiscapacidad
+                  {!resultadoOCR.esCedulaEcuatoriana
+                    ? "Documento no reconocido como cédula ecuatoriana"
+                    : resultadoOCR.tieneDiscapacidad
                     ? "Discapacidad detectada — 50% de descuento"
                     : "No se detectó discapacidad en la cédula"}
                 </span>
@@ -266,18 +304,19 @@ export default function PerfilPage() {
                 Confianza del análisis: {resultadoOCR.confianza}
               </p>
 
-              {!discapacidadGuardada ? (
+              {/* Solo mostrar botón de guardar si fue una cédula válida */}
+              {resultadoOCR.esCedulaEcuatoriana && !discapacidadGuardada && (
                 <Button
                   size="sm"
                   className="w-full mt-2"
                   onClick={handleGuardarDiscapacidad}
                   variant={resultadoOCR.tieneDiscapacidad ? "default" : "outline"}
                 >
-                  {resultadoOCR.tieneDiscapacidad
-                    ? "Activar descuento"
-                    : "Confirmar sin descuento"}
+                  {resultadoOCR.tieneDiscapacidad ? "Activar descuento" : "Confirmar sin descuento"}
                 </Button>
-              ) : (
+              )}
+
+              {discapacidadGuardada && (
                 <div className="flex items-center gap-2 pt-1 pl-6 text-green-600 text-sm font-medium">
                   <CheckCircle2 size={14} />
                   Guardado correctamente
@@ -286,17 +325,11 @@ export default function PerfilPage() {
             </div>
           )}
 
-          {/* Cambiar imagen si ya hay resultado */}
+          {/* Subir otra imagen */}
           {resultadoOCR && (
             <button
               className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground w-full text-center"
-              onClick={() => {
-                setCedulaFile(null);
-                setCedulaPreview(null);
-                setResultadoOCR(null);
-                setDiscapacidadGuardada(false);
-                if (fileInputRef.current) fileInputRef.current.value = "";
-              }}
+              onClick={handleReset}
             >
               Subir otra imagen
             </button>
