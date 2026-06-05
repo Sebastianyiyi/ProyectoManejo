@@ -1965,7 +1965,7 @@ export default function ChoferDashboard() {
                 className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
               >
                 <option value="">{t("chofer_sale_trip_select")}</option>
-                {viajes.map((viaje) => (
+                {viajesDisponiblesVenta.map((viaje) => (
                   <option key={viaje.id} value={viaje.id}>
                     Viaje #{viaje.id} - {viaje.rutas?.ciudad_origen} →{" "}
                     {viaje.rutas?.ciudad_destino} - {viaje.estado} - {viaje.tipo_viaje}
