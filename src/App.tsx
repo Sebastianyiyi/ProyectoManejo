@@ -28,6 +28,7 @@ import CooperativaPerfilPage from "./pages/dashboard/CooperativaPerfilPage";
 import RutasPage from "./pages/dashboard/RutasPage";
 import FrecuenciasPage from "./pages/dashboard/FrecuenciasPage";
 import BoletosPage from "./pages/dashboard/BoletosPage";
+import UsuariosPage from "./pages/dashboard/UsuariosPage";
 
 const PaginaCompra = lazy(() => import("./pages/PaginaCompra"));
 
@@ -96,6 +97,14 @@ const App = () => (
                         <ProtectedRoute allowedRoles={["administrador", "oficinista"]}>
                           <BoletosPage />
                         </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="usuarios"
+                      element={
+                        <ProtectedRoute allowedRoles={["administrador"]}>
+                          <UsuariosPage />
+                       </ProtectedRoute>
                       }
                     />
                   </Route>
