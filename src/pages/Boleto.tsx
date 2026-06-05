@@ -9,41 +9,97 @@ import QRCode from "qrcode";
 import { jsPDF } from "jspdf";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 export default function Boleto() {
   const { codigo } = useParams();
+  const { user } = useAuth();
   const [reserva, setReserva] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("reservas")
         .select(`
           *,
           viajes (
             fecha_salida, fecha_llegada_est, precio_base,
             rutas (ciudad_origen, ciudad_destino, duracion_minutos),
-            buses (placa, tipo, cooperativas (nombre))
+            buses (placa, numero, tipo, cooperativas (nombre))
+          ),
+          detalle_reserva (
+            id,
+            asiento_id,
+            precio_unitario,
+            boletos (id, estado, usado_at)
           )
         `)
-        // ✅ CORRECCIÓN: busca por id en lugar de codigo
         .eq("id", codigo!)
         .maybeSingle();
+
+      if (error) {
+        console.error("Error al cargar boleto:", error);
+      }
 
       setReserva(data);
 
       if (data) {
-        const url = await QRCode.toDataURL(
-          `BUSEC|${data.id}`,
-          { width: 320, margin: 1 }
-        );
+        // Generar el código QR con la URL absoluta para escaneado externo
+        const ticketUrl = `${window.location.origin}/boleto/${data.id}`;
+        const url = await QRCode.toDataURL(ticketUrl, { width: 320, margin: 1 });
         setQrDataUrl(url);
       }
       setLoading(false);
     })();
   }, [codigo]);
+
+  // Efecto para validación automática si el usuario es chofer
+  useEffect(() => {
+    if (loading || !reserva || !user || user.role !== "chofer" || reserva.estado !== "confirmada") return;
+
+    const autoValidate = async () => {
+      const detalles = reserva.detalle_reserva ?? [];
+      const boletosActivos = detalles
+        .flatMap((d: any) => d.boletos ? [d.boletos] : [])
+        .filter((b: any) => b.estado === "activo");
+
+      if (boletosActivos.length > 0) {
+        const ids = boletosActivos.map((b: any) => b.id);
+        const fechaUso = new Date().toISOString();
+        const { error } = await supabase
+          .from("boletos")
+          .update({ estado: "usado", usado_at: fechaUso })
+          .in("id", ids);
+
+        if (!error) {
+          toast.success("Boleto(s) validado(s) automáticamente.");
+          setReserva((prev: any) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              detalle_reserva: prev.detalle_reserva.map((dr: any) => {
+                if (dr.boletos && ids.includes(dr.boletos.id)) {
+                  return {
+                    ...dr,
+                    boletos: { ...dr.boletos, estado: "usado", usado_at: fechaUso }
+                  };
+                }
+                return dr;
+              })
+            };
+          });
+        } else {
+          console.error("Error al auto-validar asistencia:", error);
+          toast.error("No se pudo auto-validar el boleto.");
+        }
+      }
+    };
+
+    autoValidate();
+  }, [reserva, user, loading]);
 
   const descargarPDF = () => {
     if (!reserva || !qrDataUrl) return;
@@ -65,6 +121,7 @@ export default function Boleto() {
     doc.text(`${v?.rutas?.ciudad_origen} → ${v?.rutas?.ciudad_destino}`, 10, y); y += 6;
     doc.text(`Fecha: ${format(fechaSalida, "dd/MM/yyyy", { locale: es })}`, 10, y); y += 6;
     doc.text(`Hora: ${fechaSalida.toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" })}`, 10, y); y += 6;
+    doc.text(`Bus Nº: ${v?.buses?.numero ?? "—"}`, 10, y); y += 6;
     doc.text(`Placa: ${v?.buses?.placa ?? ""}`, 10, y); y += 8;
     doc.text(`Total pagado: $${Number(reserva.precio_total).toFixed(2)}`, 10, y);
 
@@ -91,6 +148,12 @@ export default function Boleto() {
   const confirmada = reserva.estado === "confirmada";
   const fechaSalida = v?.fecha_salida ? new Date(v.fecha_salida) : null;
 
+  // Calcular si todos los boletos fueron validados (usados)
+  const boletosList = (reserva.detalle_reserva ?? [])
+    .map((d: any) => d.boletos)
+    .filter(Boolean);
+  const todosUsados = boletosList.length > 0 && boletosList.every((b: any) => b.estado === "usado");
+
   return (
     <div className="container max-w-2xl py-8">
       <Button variant="ghost" size="sm" asChild className="mb-4">
@@ -107,6 +170,14 @@ export default function Boleto() {
         </Card>
       )}
 
+      {todosUsados && (
+        <Card className="p-4 mb-4 border-green-300 bg-green-50 dark:bg-green-950/20 text-green-800 dark:text-green-300">
+          <p className="text-sm">
+            ✓ <strong>Abordaje validado:</strong> Este boleto ha sido validado correctamente por el chofer y el pasajero ya puede abordar el bus.
+          </p>
+        </Card>
+      )}
+
       <Card className="overflow-hidden">
         {/* Cabecera */}
         <div className="bg-primary text-primary-foreground p-6">
@@ -115,11 +186,14 @@ export default function Boleto() {
               <Bus className="h-5 w-5" />
               <span className="font-semibold">{v?.buses?.cooperativas?.nombre}</span>
             </div>
-            <Badge className={confirmada
-              ? "bg-green-500 text-white"
-              : "bg-yellow-400 text-yellow-900"
+            <Badge className={
+              todosUsados
+                ? "bg-blue-600 text-white"
+                : confirmada
+                ? "bg-green-500 text-white"
+                : "bg-yellow-400 text-yellow-900"
             }>
-              {confirmada ? "Confirmado" : "Pendiente"}
+              {todosUsados ? "Abordado" : confirmada ? "Confirmado" : "Pendiente"}
             </Badge>
           </div>
           <div className="text-3xl font-bold flex items-center gap-3 flex-wrap">
@@ -144,12 +218,20 @@ export default function Boleto() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
+                <p className="text-xs text-muted-foreground">Número de bus</p>
+                <p className="font-medium">{v?.buses?.numero ? `Disco Nº ${v.buses.numero}` : "—"}</p>
+              </div>
+              <div>
                 <p className="text-xs text-muted-foreground">Placa del bus</p>
-                <p className="font-medium">{v?.buses?.placa ?? "—"}</p>
+                <p className="font-medium font-mono">{v?.buses?.placa ?? "—"}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Tipo de bus</p>
                 <p className="font-medium capitalize">{v?.buses?.tipo ?? "—"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Asiento(s)</p>
+                <p className="font-medium">{reserva.asientos?.join(", ") ?? "—"}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Total pagado</p>

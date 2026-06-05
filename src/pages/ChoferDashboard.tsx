@@ -30,6 +30,14 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Html5Qrcode } from "html5-qrcode";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 
 interface RutaInfo {
   ciudad_origen: string;
@@ -40,6 +48,7 @@ interface BusInfo {
   placa: string;
   numero: string | null;
   tipo: string;
+  capacidad?: number;
 }
 
 interface ViajeChofer {
@@ -566,6 +575,13 @@ export default function ChoferDashboard() {
 
   const [viajes, setViajes] = useState<ViajeChofer[]>([]);
   const [cargandoViajes, setCargandoViajes] = useState(true);
+  const [ocupacionPorViaje, setOcupacionPorViaje] = useState<Record<number, number>>({});
+  const [subTabViajes, setSubTabViajes] = useState<"activos" | "historial">("activos");
+
+  const [modalPasajerosOpen, setModalPasajerosOpen] = useState(false);
+  const [viajeSeleccionadoPasajeros, setViajeSeleccionadoPasajeros] = useState<ViajeChofer | null>(null);
+  const [pasajeros, setPasajeros] = useState<any[]>([]);
+  const [cargandoPasajeros, setCargandoPasajeros] = useState(false);
 
   const [codigoQR, setCodigoQR] = useState("");
   const [boletoEncontrado, setBoletoEncontrado] = useState<BoletoValidacion | null>(null);
@@ -654,7 +670,8 @@ export default function ChoferDashboard() {
           buses (
             placa,
             numero,
-            tipo
+            tipo,
+            capacidad
           )
         `)
         .eq("chofer_id", user.id)
@@ -685,6 +702,27 @@ export default function ChoferDashboard() {
       );
 
       setViajes(viajesNormalizados);
+
+      // Cargar ocupación para cada viaje
+      const viajeIds = (data ?? []).map((v: any) => v.id);
+      let ocupacionTemp: Record<number, number> = {};
+      if (viajeIds.length > 0) {
+        const { data: reservas } = await supabase
+          .from("reservas")
+          .select("viaje_id, id, detalle_reserva(id)")
+          .in("viaje_id", viajeIds)
+          .in("estado", ["confirmada", "pendiente_pago", "pago_en_verificacion", "pendiente_validacion"]);
+        
+        if (reservas) {
+          reservas.forEach((res: any) => {
+            const count = Array.isArray(res.detalle_reserva)
+              ? res.detalle_reserva.length
+              : (res.detalle_reserva ? 1 : 0);
+            ocupacionTemp[res.viaje_id] = (ocupacionTemp[res.viaje_id] || 0) + count;
+          });
+        }
+      }
+      setOcupacionPorViaje(ocupacionTemp);
       setCargandoViajes(false);
     };
 
@@ -740,6 +778,7 @@ export default function ChoferDashboard() {
           toast.success("Código QR escaneado correctamente.");
 
           await detenerCamara();
+          await procesarYValidarQR(codigoEscaneado);
         },
         () => {
           // Esta función se ejecuta constantemente mientras busca un QR.
@@ -1521,6 +1560,185 @@ export default function ChoferDashboard() {
     toast.success("Asistencia registrada correctamente.");
   };
 
+  const validarPasajeroIndividual = async (boletoId: number) => {
+    const fechaUso = new Date().toISOString();
+    const { error } = await supabase
+      .from("boletos")
+      .update({ estado: "usado", usado_at: fechaUso })
+      .eq("id", boletoId)
+      .eq("estado", "activo");
+
+    if (error) {
+      console.error("Error al validar pasajero:", error);
+      toast.error("No se pudo registrar la validación.");
+    } else {
+      toast.success("Pasajero validado correctamente.");
+      setPasajeros((prev) =>
+        prev.map((p) => p.id === boletoId ? { ...p, estado: "usado", usado_at: fechaUso } : p)
+      );
+    }
+  };
+
+  const openModalPasajeros = async (viaje: ViajeChofer) => {
+    setViajeSeleccionadoPasajeros(viaje);
+    setModalPasajerosOpen(true);
+    setCargandoPasajeros(true);
+    try {
+      const { data, error } = await supabase
+        .from("boletos")
+        .select(`
+          id,
+          codigo_qr,
+          estado,
+          usado_at,
+          detalle_reserva!inner (
+            id,
+            asientos (numero, tipo),
+            reservas!inner (
+              id,
+              viaje_id,
+              usuarios (full_name)
+            ),
+            ocupante:usuarios (full_name)
+          )
+        `)
+        .eq("detalle_reserva.reservas.viaje_id", viaje.id);
+
+      if (error) throw error;
+
+      const list = (data ?? []).map((b: any) => {
+        const seat = b.detalle_reserva?.asientos;
+        const passengerName = b.detalle_reserva?.ocupante?.full_name || b.detalle_reserva?.reservas?.usuarios?.full_name || "Pasajero";
+        return {
+          id: b.id,
+          codigo_qr: b.codigo_qr,
+          estado: b.estado,
+          usado_at: b.usado_at,
+          asiento_numero: seat?.numero ?? "N/D",
+          asiento_tipo: seat?.tipo ?? "N/D",
+          pasajero: passengerName,
+        };
+      });
+      list.sort((a, b) => Number(a.asiento_numero) - Number(b.asiento_numero));
+      setPasajeros(list);
+    } catch (err) {
+      console.error("Error al cargar pasajeros:", err);
+      toast.error("No se pudieron cargar los pasajeros del viaje.");
+    } finally {
+      setCargandoPasajeros(false);
+    }
+  };
+
+  const procesarYValidarQR = async (codigoText: string) => {
+    let codigoLimpio = codigoText.trim();
+    if (!codigoLimpio) return;
+
+    if (codigoLimpio.includes("/boleto/")) {
+      const parts = codigoLimpio.split("/boleto/");
+      codigoLimpio = "BUSEC|" + parts[parts.length - 1];
+    }
+
+    setBuscandoBoleto(true);
+    try {
+      let boletoDataToUpdate: any[] = [];
+
+      if (codigoLimpio.startsWith("BUSEC|")) {
+        const resId = parseInt(codigoLimpio.split("|")[1]);
+        if (isNaN(resId)) {
+          toast.error("Formato de QR no válido.");
+          setBuscandoBoleto(false);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("boletos")
+          .select(`
+            id, estado, codigo_qr, detalle_reserva!inner(
+              reserva_id, asientos(numero), reservas!inner(estado, usuarios(full_name))
+            )
+          `)
+          .eq("detalle_reserva.reserva_id", resId);
+
+        if (error || !data || data.length === 0) {
+          toast.error("No se encontraron boletos para esta reserva.");
+          setBuscandoBoleto(false);
+          return;
+        }
+
+        const resState = (data[0] as any).detalle_reserva?.reservas?.estado;
+        if (resState !== "confirmada") {
+          toast.error(`No se puede validar: Reserva en estado '${resState}'`);
+          setBuscandoBoleto(false);
+          return;
+        }
+
+        boletoDataToUpdate = data.filter((b: any) => b.estado === "activo");
+        if (boletoDataToUpdate.length === 0) {
+          toast.error("Todos los boletos de esta reserva ya fueron validados.");
+          setBuscandoBoleto(false);
+          return;
+        }
+      } else {
+        const { data, error } = await supabase
+          .from("boletos")
+          .select(`
+            id, estado, codigo_qr, detalle_reserva!inner(
+              reserva_id, asientos(numero), reservas!inner(estado, usuarios(full_name))
+            )
+          `)
+          .eq("codigo_qr", codigoLimpio)
+          .maybeSingle();
+
+        if (error || !data) {
+          toast.error("No se encontró el boleto.");
+          setBuscandoBoleto(false);
+          return;
+        }
+
+        const resState = (data as any).detalle_reserva?.reservas?.estado;
+        if (resState !== "confirmada") {
+          toast.error(`No se puede validar: Reserva en estado '${resState}'`);
+          setBuscandoBoleto(false);
+          return;
+        }
+
+        if (data.estado !== "activo") {
+          toast.error(`El boleto ya está ${data.estado}.`);
+          setBuscandoBoleto(false);
+          return;
+        }
+
+        boletoDataToUpdate = [data];
+      }
+
+      const idsToUpdate = boletoDataToUpdate.map((b) => b.id);
+      const fechaUso = new Date().toISOString();
+      const { error: updateError } = await supabase
+        .from("boletos")
+        .update({ estado: "usado", usado_at: fechaUso })
+        .in("id", idsToUpdate);
+
+      if (updateError) throw updateError;
+
+      const nombresPasajeros = boletoDataToUpdate
+        .map((b) => {
+          const pName = b.detalle_reserva?.reservas?.usuarios?.full_name || "Pasajero";
+          const seatNo = b.detalle_reserva?.asientos?.numero ?? "N/D";
+          return `${pName} (Asiento ${seatNo})`;
+        })
+        .join(", ");
+
+      toast.success(`✓ Ingreso validado: ${nombresPasajeros}`);
+      setCodigoQR("");
+      setBoletoEncontrado(null);
+    } catch (err) {
+      console.error("Error al procesar QR:", err);
+      toast.error("Ocurrió un error al procesar el código QR.");
+    } finally {
+      setBuscandoBoleto(false);
+    }
+  };
+
   const limpiarBusquedaQR = async () => {
     setCodigoQR("");
     setBoletoEncontrado(null);
@@ -1604,6 +1822,32 @@ export default function ChoferDashboard() {
           <section className="space-y-4">
             <h2 className="text-xl font-semibold">{t("chofer_trips_title")}</h2>
 
+            {/* Sub-tabs for active vs historical trips */}
+            <div className="flex gap-2 border-b pb-2 mb-4">
+              <button
+                type="button"
+                onClick={() => setSubTabViajes("activos")}
+                className={`pb-2 px-4 font-semibold text-sm border-b-2 transition-colors ${
+                  subTabViajes === "activos"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Viajes Activos
+              </button>
+              <button
+                type="button"
+                onClick={() => setSubTabViajes("historial")}
+                className={`pb-2 px-4 font-semibold text-sm border-b-2 transition-colors ${
+                  subTabViajes === "historial"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Historial de Viajes
+              </button>
+            </div>
+
             {cargandoViajes ? (
               <Card className="p-6 flex items-center gap-2">
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -1611,7 +1855,7 @@ export default function ChoferDashboard() {
               </Card>
             ) : viajesAsignadosActivos.length === 0 ? (
               <Card className="p-6 text-muted-foreground">
-                {t("chofer_trips_empty")}
+                No hay viajes asignados en esta sección.
               </Card>
             ) : (
               <div className="grid gap-4">
@@ -1628,37 +1872,44 @@ export default function ChoferDashboard() {
                           </h3>
                         </div>
 
-                        <p className="text-sm text-muted-foreground">
-                          {t("chofer_departure")} {new Date(viaje.fecha_salida).toLocaleString()}
-                        </p>
+                          <p className="text-sm text-muted-foreground">
+                            {t("chofer_departure")} {new Date(viaje.fecha_salida).toLocaleString()}
+                          </p>
 
-                        <p className="text-sm text-muted-foreground">
-                          {t("chofer_arrival")}{" "}
-                          {new Date(viaje.fecha_llegada_est).toLocaleString()}
-                        </p>
+                          <p className="text-sm text-muted-foreground">
+                            {t("chofer_arrival")}{" "}
+                            {new Date(viaje.fecha_llegada_est).toLocaleString()}
+                          </p>
 
-                        <p className="text-sm text-muted-foreground">
-                          {t("chofer_bus_label")} {viaje.buses?.placa ?? t("chofer_bus_unassigned")}{" "}
-                          {viaje.buses?.numero ? `- Nº ${viaje.buses.numero}` : ""}
-                        </p>
+                          <p className="text-sm text-muted-foreground">
+                            {t("chofer_bus_label")} {viaje.buses?.placa ?? t("chofer_bus_unassigned")}{" "}
+                            {viaje.buses?.numero ? `- Nº ${viaje.buses.numero}` : ""}
+                          </p>
 
-                        <p className="text-sm text-muted-foreground">
-                          {t("chofer_bus_type")} {viaje.buses?.tipo ?? t("chofer_bus_type_undefined")}
-                        </p>
+                          <p className="text-sm text-muted-foreground">
+                            {t("chofer_bus_type")} {viaje.buses?.tipo ?? t("chofer_bus_type_undefined")}
+                          </p>
+
+                          <p className="text-sm text-muted-foreground font-semibold text-primary">
+                            Boletos vendidos: {ocupacionPorViaje[viaje.id] ?? 0} / {viaje.buses?.capacidad ?? "N/D"}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-col gap-2 md:items-end">
+                          <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary capitalize">
+                            {viaje.estado.replace(/_/g, " ")}
+                          </span>
+
+                          <Button
+                            variant="outline"
+                            onClick={() => openModalPasajeros(viaje)}
+                          >
+                            {t("chofer_see_passengers")}
+                          </Button>
+                        </div>
                       </div>
-
-                      <div className="flex flex-col gap-2 md:items-end">
-                        <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-                          {viaje.estado}
-                        </span>
-
-                        <Button variant="outline" disabled>
-                          {t("chofer_see_passengers")}
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  ))}
               </div>
             )}
           </section>
@@ -2354,6 +2605,93 @@ export default function ChoferDashboard() {
             )}
         </TabsContent>
       </Tabs>
+
+      {/* Dialog para listar pasajeros de un viaje */}
+      <Dialog open={modalPasajerosOpen} onOpenChange={setModalPasajerosOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              Pasajeros - Viaje #{viajeSeleccionadoPasajeros?.id}{" "}
+              {viajeSeleccionadoPasajeros?.rutas
+                ? `(${viajeSeleccionadoPasajeros.rutas.ciudad_origen} → ${viajeSeleccionadoPasajeros.rutas.ciudad_destino})`
+                : ""}
+            </DialogTitle>
+          </DialogHeader>
+
+          {cargandoPasajeros ? (
+            <div className="py-8 flex justify-center items-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span>Cargando lista de pasajeros...</span>
+            </div>
+          ) : pasajeros.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              No hay pasajeros reservados para este viaje todavía.
+            </p>
+          ) : (
+            <div className="overflow-x-auto max-h-[60vh] border rounded-md">
+              <table className="w-full text-sm">
+                <thead className="border-b bg-muted/40 sticky top-0">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-semibold">Asiento</th>
+                    <th className="px-4 py-2 text-left font-semibold">Pasajero</th>
+                    <th className="px-4 py-2 text-center font-semibold">Estado</th>
+                    <th className="px-4 py-2 text-center font-semibold">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pasajeros.map((p) => (
+                    <tr key={p.id} className="border-b last:border-0 hover:bg-muted/10">
+                      <td className="px-4 py-2">
+                        <span className="font-semibold">#{p.asiento_numero}</span>{" "}
+                        <span className="text-xs text-muted-foreground capitalize">({p.asiento_tipo})</span>
+                      </td>
+                      <td className="px-4 py-2 font-medium">{p.pasajero}</td>
+                      <td className="px-4 py-2 text-center">
+                        <Badge
+                          variant={
+                            p.estado === "usado"
+                              ? "default"
+                              : p.estado === "activo"
+                              ? "secondary"
+                              : "destructive"
+                          }
+                          className={
+                            p.estado === "usado"
+                              ? "bg-green-100 text-green-700 hover:bg-green-100"
+                              : p.estado === "activo"
+                              ? "bg-amber-100 text-amber-700 hover:bg-amber-100"
+                              : "bg-red-100 text-red-700 hover:bg-red-100"
+                          }
+                        >
+                          {p.estado === "usado" ? "Validado" : p.estado === "activo" ? "Pendiente" : p.estado}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        {p.estado === "activo" ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => validarPasajeroIndividual(p.id)}
+                            className="h-8 py-1 px-3"
+                          >
+                            Validar
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button onClick={() => setModalPasajerosOpen(false)}>Cerrar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
