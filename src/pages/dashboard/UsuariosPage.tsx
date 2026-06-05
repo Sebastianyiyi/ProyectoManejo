@@ -19,8 +19,8 @@ import {
   usuariosService,
 } from "@/lib/usuariosService";
 
-const ROLES: RolUsuario[] = [
-  "administrador",
+// El rol "administrador" no se asigna desde el combobox; se delega por correo.
+const ROLES_EDITABLES: RolUsuario[] = [
   "oficinista",
   "chofer",
   "passenger",
@@ -285,7 +285,7 @@ export default function UsuariosPage() {
               }
               className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
             >
-              {ROLES.map((rol) => (
+              {ROLES_EDITABLES.map((rol) => (
                 <option key={rol} value={rol}>
                   {rol}
                 </option>
@@ -391,19 +391,25 @@ export default function UsuariosPage() {
                     </td>
 
                     <td className="px-5 py-3">
-                      <select
-                        value={usuario.rol}
-                        onChange={(e) =>
-                          cambiarRol(usuario, e.target.value as RolUsuario)
-                        }
-                        className="rounded-md border bg-background px-2 py-1 text-xs capitalize outline-none focus:ring-2 focus:ring-primary"
-                      >
-                        {ROLES.map((rol) => (
-                          <option key={rol} value={rol}>
-                            {rol}
-                          </option>
-                        ))}
-                      </select>
+                      {usuario.rol === "administrador" ? (
+                        <span className="inline-block rounded-md bg-primary/10 px-2 py-1 text-xs font-medium capitalize text-primary">
+                          {usuario.rol}
+                        </span>
+                      ) : (
+                        <select
+                          value={usuario.rol}
+                          onChange={(e) =>
+                            cambiarRol(usuario, e.target.value as RolUsuario)
+                          }
+                          className="rounded-md border bg-background px-2 py-1 text-xs capitalize outline-none focus:ring-2 focus:ring-primary"
+                        >
+                          {ROLES_EDITABLES.map((rol) => (
+                            <option key={rol} value={rol}>
+                              {rol}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </td>
 
                     <td className="px-5 py-3 text-muted-foreground">
@@ -414,25 +420,31 @@ export default function UsuariosPage() {
 
                     <td className="px-5 py-3">
                       <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => editarUsuario(usuario)}
-                          className="gap-1"
-                        >
-                          <Edit className="h-4 w-4" />
-                          Editar
-                        </Button>
+                        {usuario.rol === "administrador" ? (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        ) : (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => editarUsuario(usuario)}
+                              className="gap-1"
+                            >
+                              <Edit className="h-4 w-4" />
+                              Editar
+                            </Button>
 
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => eliminarUsuario(usuario)}
-                          className="gap-1"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Eliminar
-                        </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => eliminarUsuario(usuario)}
+                              className="gap-1"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Eliminar
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
