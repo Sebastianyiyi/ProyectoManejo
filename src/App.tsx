@@ -80,14 +80,16 @@ const App = () => (
 
                   <Route path="/dashboard" element={<DashboardLayout />}>
                     <Route index element={<InicioPage />} />
+
                     <Route
                       path="cooperativa"
                       element={
                         <ProtectedRoute allowedRoles={["administrador"]}>
-                          <CooperativaPerfilPage />
+                         <CooperativaPerfilPage />
                         </ProtectedRoute>
                       }
                     />
+
                     <Route path="buses" element={<BusesPage />} />
                     <Route path="rutas" element={<RutasPage />} />
                     <Route path="frecuencias" element={<FrecuenciasPage />} />

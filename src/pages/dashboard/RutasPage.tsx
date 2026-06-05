@@ -125,7 +125,9 @@ export default function RutasPage() {
 
   // ─── Filtro ─────────────────────────────────────────────────────────────────
 
-  const filtered = viajes.filter((v) =>
+  // Solo viajes con una frecuencia (ruta) definida; se ocultan los antiguos sin ruta.
+  const viajesConRuta = viajes.filter((v) => v.frecuencias);
+  const filtered = viajesConRuta.filter((v) =>
     [v.frecuencias?.ciudad_origen, v.frecuencias?.ciudad_destino, v.buses?.placa]
       .some((val) => val?.toLowerCase().includes(search.toLowerCase()))
   );
@@ -198,7 +200,7 @@ export default function RutasPage() {
         <div>
           <h1 className="text-2xl font-bold">{t("dash_routes")}</h1>
           <p className="text-muted-foreground text-sm">
-            {viajes.length} {viajes.length !== 1 ? "viajes programados" : "viaje programado"}
+            {viajesConRuta.length} {viajesConRuta.length !== 1 ? "viajes programados" : "viaje programado"}
           </p>
         </div>
         <Button
