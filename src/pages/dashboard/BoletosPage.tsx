@@ -46,19 +46,13 @@ export default function BoletosPage() {
   useEffect(() => {
     const fetchBoletos = async () => {
       try {
-        const coopId = getCooperativaActivaId();
-        if (!coopId) {
-          setLoading(false);
-          return;
-        }
-
         const { data, error } = await supabase
           .from("reservas")
           .select(`
             *,
             viajes!inner (
               fecha_salida,
-              buses!inner (
+              buses (
                 cooperativa_id,
                 placa
               ),
@@ -73,7 +67,6 @@ export default function BoletosPage() {
               email
             )
           `)
-          .eq("viajes.buses.cooperativa_id", coopId)
           .order("created_at", { ascending: false });
 
         if (error) throw error;
