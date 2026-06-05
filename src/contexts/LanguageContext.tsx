@@ -147,7 +147,7 @@ const T = {
     auth_forgot: "-Recuperar Contraseña-",
     auth_forgot_sent: "Revisa tu correo para restablecer tu contraseña.",
     auth_forgot_error: "No se pudo enviar el correo de recuperación.",
-    auth_forgot_no_email: "Ingresa tu correo primero.",
+    auth_forgot_no_email: "Ingresa su correo porfavor.",
     // Perfil
     perfil_title: "Editar perfil",
     perfil_back: "Volver",
