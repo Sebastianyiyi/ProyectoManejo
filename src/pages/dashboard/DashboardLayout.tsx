@@ -11,7 +11,7 @@ export default function DashboardLayout() {
 
   const NAV = [
     { to: "/dashboard",             label: t("dash_home"),        icon: LayoutDashboard, end: true },
-    { to: "/dashboard/cooperativa", label: t("dash_cooperative"), icon: Building2 },
+    { to: "/dashboard/cooperativa", label: t("dash_cooperative"), icon: Building2, adminOnly: true },
     { to: "/dashboard/buses",        label: t("dash_buses"),       icon: Bus },
     { to: "/dashboard/frecuencias",   label: "Frecuencias",         icon: Clock },
     { to: "/dashboard/rutas",         label: t("dash_routes"),      icon: Map },
