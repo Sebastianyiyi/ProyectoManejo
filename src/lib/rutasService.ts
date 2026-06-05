@@ -157,7 +157,17 @@ export const viajesService = {
   },
 
   async delete(id: number): Promise<void> {
+    // No se puede eliminar un viaje que ya tiene reservas/boletos de clientes.
+    const { count } = await supabase
+      .from("reservas")
+      .select("*", { count: "exact", head: true })
+      .eq("viaje_id", id);
+    if ((count ?? 0) > 0) {
+      throw new Error(
+        "No se puede eliminar el viaje porque tiene reservas o boletos asociados. Cámbialo a 'cancelado' en lugar de eliminarlo."
+      );
+    }
     const { error } = await supabase.from("viajes").delete().eq("id", id);
-    if (error) throw error;
+    if (error) throw new Error(error.message);
   },
 };

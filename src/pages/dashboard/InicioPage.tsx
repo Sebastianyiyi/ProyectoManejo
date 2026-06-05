@@ -19,8 +19,13 @@ interface ViajeProximo {
   fecha_salida: string;
   precio_base: number;
   rutas: { ciudad_origen: string; ciudad_destino: string } | null;
+  frecuencias: { ciudad_origen: string; ciudad_destino: string } | null;
   buses: { placa: string } | null;
 }
+
+// Origen/destino del viaje: de su ruta o, si no tiene, de su frecuencia.
+const rutaOrigen = (v: ViajeProximo) => v.rutas?.ciudad_origen ?? v.frecuencias?.ciudad_origen ?? "—";
+const rutaDestino = (v: ViajeProximo) => v.rutas?.ciudad_destino ?? v.frecuencias?.ciudad_destino ?? "—";
 
 function StatCard({
   icon: Icon,
@@ -82,7 +87,7 @@ export default function InicioPage() {
           supabase.from("boletos").select("*", { count: "exact", head: true }).eq("estado", "activo"),
           supabase
             .from("viajes")
-            .select("id, fecha_salida, precio_base, rutas(ciudad_origen, ciudad_destino), buses(placa)")
+            .select("id, fecha_salida, precio_base, rutas(ciudad_origen, ciudad_destino), frecuencias(ciudad_origen, ciudad_destino), buses(placa)")
             .eq("estado", "programado")
             .gte("fecha_salida", new Date().toISOString())
             .order("fecha_salida", { ascending: true })
@@ -186,7 +191,7 @@ export default function InicioPage() {
                 {proximos.map((v, i) => (
                   <tr key={v.id} className={i % 2 === 0 ? "" : "bg-muted/20"}>
                     <td className="px-4 py-3 font-medium">
-                      {v.rutas?.ciudad_origen} → {v.rutas?.ciudad_destino}
+                      {rutaOrigen(v)} → {rutaDestino(v)}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {new Date(v.fecha_salida).toLocaleString("es-EC", {
