@@ -20,7 +20,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Pencil, Trash2, Power, Image as ImageIcon, Upload, X, Loader2 } from "lucide-react";
+import { PlusCircle, Pencil, Power, Image as ImageIcon, Upload, X, Loader2 } from "lucide-react";
 
 // ── Importar el nuevo configurador de asientos ──────────────────────────────
 import {
@@ -116,7 +116,6 @@ export default function BusesPage() {
     defaultSeatConfig()
   );
   const [saving, setSaving] = useState(false);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
@@ -243,18 +242,6 @@ export default function BusesPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteId) return;
-    try {
-      await busService.delete(deleteId);
-      toast({ title: t("buses_deleted") });
-      setDeleteId(null);
-      fetchBuses();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : t("buses_error_delete");
-      toast({ title: t("buses_error_delete"), description: msg, variant: "destructive" });
-    }
-  };
 
   return (
     <div className="p-6 space-y-6">
@@ -362,11 +349,6 @@ export default function BusesPage() {
                             className={bus.activo ? "text-green-600" : "text-muted-foreground"}
                           />
                         </Button>
-                        <Button size="icon" variant="ghost"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setDeleteId(bus.id)}>
-                          <Trash2 size={15} />
-                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -406,7 +388,6 @@ export default function BusesPage() {
                     <SelectItem value="economico">{t("buses_type_economico")}</SelectItem>
                     <SelectItem value="ejecutivo">{t("buses_type_ejecutivo")}</SelectItem>
                     <SelectItem value="premium">{t("buses_type_premium")}</SelectItem>
-                    <SelectItem value="doble_piso">{t("buses_type_doble_piso")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -561,24 +542,7 @@ export default function BusesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Confirmar eliminación */}
-      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("buses_delete_title")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("buses_delete_desc")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("buses_cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              {t("buses_delete_confirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
     </div>
   );
 }
