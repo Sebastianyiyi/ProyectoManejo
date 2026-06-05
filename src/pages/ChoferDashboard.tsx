@@ -1660,6 +1660,67 @@ export default function ChoferDashboard() {
               </div>
             )}
           </section>
+           <section className="space-y-4">
+            <h2 className="text-xl font-semibold">{t("chofer_history_title")}</h2>
+
+            {cargandoViajes ? (
+              <Card className="p-6 flex items-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>{t("chofer_trips_loading")}</span>
+              </Card>
+            ) : viajesCompletados.length === 0 ? (
+              <Card className="p-6 text-muted-foreground">
+                {t("chofer_history_empty")}
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {viajesCompletados.map((viaje) => (
+                  <Card key={viaje.id} className="p-5">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-primary" />
+
+                          <h3 className="font-semibold">
+                            {viaje.rutas?.ciudad_origen ?? "Origen no disponible"} →{" "}
+                            {viaje.rutas?.ciudad_destino ?? "Destino no disponible"}
+                          </h3>
+                        </div>
+
+                        <p className="text-sm text-muted-foreground">
+                          {t("chofer_departure")} {new Date(viaje.fecha_salida).toLocaleString()}
+                        </p>
+
+                        <p className="text-sm text-muted-foreground">
+                          {t("chofer_arrival")}{" "}
+                          {new Date(viaje.fecha_llegada_est).toLocaleString()}
+                        </p>
+
+                        <p className="text-sm text-muted-foreground">
+                          {t("chofer_bus_label")} {viaje.buses?.placa ?? t("chofer_bus_unassigned")}{" "}
+                          {viaje.buses?.numero ? `- Nº ${viaje.buses.numero}` : ""}
+                        </p>
+
+                        <p className="text-sm text-muted-foreground">
+                          {t("chofer_bus_type")} {viaje.buses?.tipo ?? t("chofer_bus_type_undefined")}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col gap-2 md:items-end">
+                        <span className="rounded-full bg-muted px-3 py-1 text-sm font-medium text-muted-foreground">
+                          {viaje.estado}
+                        </span>
+
+                        <Button variant="outline" disabled>
+                          {t("chofer_see_passengers")}
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </section>
         </TabsContent>
 
         <TabsContent value="qr" className="space-y-6">
