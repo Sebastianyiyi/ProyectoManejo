@@ -55,13 +55,13 @@ const estadoBadgeClass: Record<string, string> = {
 export default function InicioPage() {
   const { toast } = useToast();
   const { t } = useLang();
-  const { cooperativaActiva, loading: loadingCoop } = useCooperativa();
+  const { cooperativa, loading: loadingCoop } = useCooperativa();
   const [stats, setStats] = useState<Stats | null>(null);
   const [proximos, setProximos] = useState<ViajeProximo[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!cooperativaActiva) {
+    if (!cooperativa) {
       if (!loadingCoop) setLoading(false);
       return;
     }
@@ -103,20 +103,20 @@ export default function InicioPage() {
         setLoading(false);
       }
     }
-    load(cooperativaActiva.id);
-  }, [cooperativaActiva, loadingCoop, toast, t]);
+    load(cooperativa.id);
+  }, [cooperativa, loadingCoop, toast, t]);
 
   if (loading || loadingCoop) {
     return <div className="p-6 text-muted-foreground text-sm">{t("coop_loading")}</div>;
   }
 
-  if (!cooperativaActiva) {
+  if (!cooperativa) {
     return (
       <div className="p-6 text-muted-foreground text-sm">{t("coop_not_found")}</div>
     );
   }
 
-  const coop = cooperativaActiva;
+  const coop = cooperativa;
   const estadoLabelKey = coop.estado === "verificada"
     ? "coop_estado_verificada"
     : coop.estado === "suspendida"

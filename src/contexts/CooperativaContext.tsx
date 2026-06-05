@@ -1,52 +1,47 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import type { ReactNode } from "react";
 import { cooperativaService } from "@/lib/cooperativaService";
-import type { Cooperativa } from "@/lib/cooperativaService";
-import { getCooperativaActivaId, setCooperativaActivaId } from "@/lib/cooperativaActiva";
+import type { Cooperativa, CooperativaUpdate } from "@/lib/cooperativaService";
+import { setCooperativaActivaId } from "@/lib/cooperativaActiva";
 
 interface CooperativaContextType {
-  cooperativas: Cooperativa[];
-  cooperativaActiva: Cooperativa | null;
+  cooperativa: Cooperativa | null;
   loading: boolean;
-  seleccionar: (id: number) => void;
+  actualizar: (fields: CooperativaUpdate) => Promise<void>;
   refrescar: () => Promise<void>;
 }
 
 const CooperativaContext = createContext<CooperativaContextType | null>(null);
 
 export function CooperativaProvider({ children }: { children: ReactNode }) {
-  const [cooperativas, setCooperativas] = useState<Cooperativa[]>([]);
-  const [activaId, setActivaId] = useState<number | null>(() => getCooperativaActivaId());
+  const [cooperativa, setCooperativa] = useState<Cooperativa | null>(null);
   const [loading, setLoading] = useState(true);
 
   const refrescar = useCallback(async () => {
-    const lista = await cooperativaService.getAll();
-    setCooperativas(lista);
-    // Si no hay una activa válida, se toma la primera de la lista.
-    setActivaId((prev) => {
-      if (prev && lista.some((c) => c.id === prev)) return prev;
-      const primera = lista[0]?.id ?? null;
-      if (primera) setCooperativaActivaId(primera);
-      return primera;
-    });
-    setLoading(false);
+    try {
+      const coop = await cooperativaService.get();
+      setCooperativa(coop);
+      // Guarda el id para que busService filtre los buses por esta cooperativa.
+      setCooperativaActivaId(coop.id);
+    } catch {
+      setCooperativa(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     refrescar();
   }, [refrescar]);
 
-  const seleccionar = (id: number) => {
-    setCooperativaActivaId(id);
-    setActivaId(id);
+  const actualizar = async (fields: CooperativaUpdate) => {
+    if (!cooperativa) return;
+    const actualizada = await cooperativaService.update(cooperativa.id, fields);
+    setCooperativa(actualizada);
   };
 
-  const cooperativaActiva = cooperativas.find((c) => c.id === activaId) ?? null;
-
   return (
-    <CooperativaContext.Provider
-      value={{ cooperativas, cooperativaActiva, loading, seleccionar, refrescar }}
-    >
+    <CooperativaContext.Provider value={{ cooperativa, loading, actualizar, refrescar }}>
       {children}
     </CooperativaContext.Provider>
   );

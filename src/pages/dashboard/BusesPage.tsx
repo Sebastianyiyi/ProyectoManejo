@@ -35,7 +35,7 @@ const EMPTY_FORM: Omit<BusInsert, "cooperativa_id" | "numero"> = {
 export default function BusesPage() {
   const { toast } = useToast();
   const { t } = useLang();
-  const { cooperativaActiva } = useCooperativa();
+  const { cooperativa } = useCooperativa();
   const [buses, setBuses] = useState<Bus[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -62,8 +62,8 @@ export default function BusesPage() {
     }
   }, [toast, t]);
 
-  // Recarga la lista cuando se monta o cuando cambia la cooperativa activa.
-  useEffect(() => { fetchBuses(); }, [fetchBuses, cooperativaActiva?.id]);
+  // Recarga la lista cuando se monta o cuando cambia la cooperativa.
+  useEffect(() => { fetchBuses(); }, [fetchBuses, cooperativa?.id]);
 
   const filtered = buses.filter((b) =>
     [b.placa, b.numero, b.marca_chasis, b.marca_carroceria]
@@ -228,7 +228,7 @@ export default function BusesPage() {
                   <tr key={bus.id} className={`border-b last:border-0 ${i % 2 === 0 ? "" : "bg-muted/20"}`}>
                     <td className="px-4 py-3 font-mono">{bus.numero ?? "—"}</td>
                     <td className="px-4 py-3 font-mono font-semibold">{bus.placa}</td>
-                    <td className="px-4 py-3">{cooperativaActiva?.nombre ?? "—"}</td>
+                    <td className="px-4 py-3">{cooperativa?.nombre ?? "—"}</td>
                     <td className="px-4 py-3 capitalize">{bus.tipo}</td>
                     <td className="px-4 py-3">{bus.capacidad}</td>
                     <td className="px-4 py-3">{bus.marca_chasis ?? "—"}</td>

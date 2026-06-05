@@ -16,37 +16,17 @@ export interface CooperativaUpdate {
   logo_url: string | null;
 }
 
-export type CooperativaInsert = CooperativaUpdate;
-
 const COLUMNS = "id, nombre, ruc, estado, ciudad_principal, logo_url";
 
 export const cooperativaService = {
-  // Lista todas las cooperativas no suspendidas (para el selector).
-  async getAll(): Promise<Cooperativa[]> {
+  // La app opera con una única cooperativa: se devuelve la primera no suspendida.
+  async get(): Promise<Cooperativa> {
     const { data, error } = await supabase
       .from("cooperativas")
       .select(COLUMNS)
       .neq("estado", "suspendida")
-      .order("nombre", { ascending: true });
-    if (error) throw error;
-    return data as Cooperativa[];
-  },
-
-  async getById(id: number): Promise<Cooperativa> {
-    const { data, error } = await supabase
-      .from("cooperativas")
-      .select(COLUMNS)
-      .eq("id", id)
-      .single();
-    if (error) throw error;
-    return data as Cooperativa;
-  },
-
-  async create(coop: CooperativaInsert): Promise<Cooperativa> {
-    const { data, error } = await supabase
-      .from("cooperativas")
-      .insert({ ...coop, estado: "verificada" })
-      .select(COLUMNS)
+      .order("id", { ascending: true })
+      .limit(1)
       .single();
     if (error) throw error;
     return data as Cooperativa;
