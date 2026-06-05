@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -63,6 +63,10 @@ const tipoBusConfig: Record<string, { label: string; className: string }> = {
   premium:    { label: "Doble Piso",  className: "bg-indigo-100 text-indigo-700 border border-indigo-400" },
 };
 
+// Origen/destino efectivo: el del viaje viene de su ruta o, si no, de su frecuencia.
+const getOrigen = (v: Viaje) => v.rutas?.ciudad_origen ?? v.frecuencias?.ciudad_origen ?? "";
+const getDestino = (v: Viaje) => v.rutas?.ciudad_destino ?? v.frecuencias?.ciudad_destino ?? "";
+
 export default function Buscar() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
@@ -71,7 +75,7 @@ export default function Buscar() {
 
   const [origen, setOrigen] = useState(params.get("origen") || "");
   const [destino, setDestino] = useState(params.get("destino") || "");
-  const [fecha, setFecha] = useState(params.get("fecha") || today);
+  const [fecha, setFecha] = useState(params.get("fecha") || "");
   const [tipo, setTipo] = useState(params.get("tipo") || "todos");
 
   // Autocompletado (tu implementación)
@@ -118,18 +122,12 @@ export default function Buscar() {
     cargarDescuentoUsuario();
   }, []);
 
-  // Origen/destino efectivo: el del viaje viene de su ruta o, si no, de su frecuencia.
-  const getOrigen = (v: Viaje) => v.rutas?.ciudad_origen ?? v.frecuencias?.ciudad_origen ?? "";
-  const getDestino = (v: Viaje) => v.rutas?.ciudad_destino ?? v.frecuencias?.ciudad_destino ?? "";
-
-  // Consulta de VladAlz con timezone y estado programado
+  // Carga los viajes disponibles. La fecha es opcional: si no se elige,
+  // se traen todos los viajes programados de hoy en adelante.
   const buscar = async () => {
     setLoading(true);
 
-    const fechaInicio = `${fecha}T00:00:00-05:00`;
-    const fechaFin = `${fecha}T23:59:59-05:00`;
-
-    const { data } = await supabase
+    let query = supabase
       .from("viajes")
       .select(`
         id, fecha_salida, fecha_llegada_est, precio_base, estado,
@@ -137,10 +135,17 @@ export default function Buscar() {
         frecuencias (ciudad_origen, ciudad_destino, hora_salida),
         buses (tipo, capacidad, placa, numero, marca_chasis, marca_carroceria, cooperativas (id, nombre, logo_url))
       `)
-      .eq("estado", "programado")
-      .gte("fecha_salida", fechaInicio)
-      .lte("fecha_salida", fechaFin)
-      .order("fecha_salida");
+      .eq("estado", "programado");
+
+    if (fecha) {
+      query = query
+        .gte("fecha_salida", `${fecha}T00:00:00-05:00`)
+        .lte("fecha_salida", `${fecha}T23:59:59-05:00`);
+    } else {
+      query = query.gte("fecha_salida", `${today}T00:00:00-05:00`);
+    }
+
+    const { data } = await query.order("fecha_salida");
 
     let res = (data ?? []) as unknown as Viaje[];
 
@@ -153,7 +158,7 @@ export default function Buscar() {
         .select("viaje_id, id, detalle_reserva(id)")
         .in("viaje_id", viajeIds)
         .in("estado", ["confirmada", "pendiente_pago", "pago_en_verificacion", "pendiente_validacion"]);
-      
+
       if (reservas) {
         reservas.forEach((r: any) => {
           const count = Array.isArray(r.detalle_reserva)
@@ -172,21 +177,24 @@ export default function Buscar() {
       return occupied < capacity;
     });
 
-    if (origen.trim())
-      res = res.filter((v) =>
-        getOrigen(v).toLowerCase().includes(origen.trim().toLowerCase())
-      );
-    if (destino.trim())
-      res = res.filter((v) =>
-        getDestino(v).toLowerCase().includes(destino.trim().toLowerCase())
-      );
-    if (tipo !== "todos") res = res.filter((v) => v.buses?.tipo === tipo);
-
     setResultados(res);
     setLoading(false);
   };
 
-  useEffect(() => { buscar(); /* eslint-disable-next-line */ }, []);
+  // Filtrado en vivo por origen, destino y tipo (parcial, sin pulsar Buscar).
+  const resultadosFiltrados = useMemo(() => {
+    const o = origen.trim().toLowerCase();
+    const d = destino.trim().toLowerCase();
+    return resultados.filter((v) => {
+      if (o && !getOrigen(v).toLowerCase().includes(o)) return false;
+      if (d && !getDestino(v).toLowerCase().includes(d)) return false;
+      if (tipo !== "todos" && v.buses?.tipo !== tipo) return false;
+      return true;
+    });
+  }, [resultados, origen, destino, tipo]);
+
+  // Recarga de la BD al montar y cuando cambia la fecha.
+  useEffect(() => { buscar(); /* eslint-disable-next-line */ }, [fecha]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -297,7 +305,7 @@ export default function Buscar() {
         <div className="py-16 grid place-items-center">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      ) : resultados.length === 0 ? (
+      ) : resultadosFiltrados.length === 0 ? (
         <Card className="p-12 text-center">
           <Bus className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
           <h3 className="font-semibold mb-1">{t("buscar_empty_title")}</h3>
@@ -305,7 +313,7 @@ export default function Buscar() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {resultados.map((v) => (
+          {resultadosFiltrados.map((v) => (
             <Card key={v.id} className="p-4 md:p-5 hover:shadow-md transition-shadow">
               <div className="flex flex-col md:flex-row md:items-center gap-4">
                 <div className="flex-1">
