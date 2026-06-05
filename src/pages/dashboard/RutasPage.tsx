@@ -1,11 +1,18 @@
 import { useEffect, useState, useCallback } from "react";
-import { rutasService } from "@/lib/rutasService";
-import type { Ruta, RutaInsert } from "@/lib/rutasService";
+import { viajesService } from "@/lib/rutasService";
+import type { ViajeConFrecuencia } from "@/lib/rutasService";
+import { frecuenciasService } from "@/lib/frecuenciasService";
+import type { Frecuencia } from "@/lib/frecuenciasService";
+import { busService } from "@/lib/busService";
+import type { Bus } from "@/lib/busService";
+import { usuariosService } from "@/lib/usuariosService";
+import type { Usuario } from "@/lib/usuariosService";
 import { useLang } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -13,100 +20,188 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Pencil, Trash2 } from "lucide-react";
+import { PlusCircle, Trash2, Pencil, Bus as BusIcon, CalendarDays, Clock, MapPin } from "lucide-react";
 
-const EMPTY_FORM: RutaInsert = {
-  ciudad_origen: "",
-  ciudad_destino: "",
-  distancia_km: null,
-  duracion_minutos: null,
+// ─── Config visual tipo de bus ────────────────────────────────────────────────
+const TIPO_LABEL: Record<string, string> = {
+  economico: "Normal",
+  ejecutivo: "VIP",
+  premium: "Doble Piso",
+};
+
+const ESTADO_BADGE: Record<string, string> = {
+  programado:  "bg-blue-100 text-blue-700 border-blue-300",
+  en_curso:    "bg-green-100 text-green-700 border-green-300",
+  finalizado:  "bg-slate-100 text-slate-600 border-slate-300",
+  cancelado:   "bg-red-100 text-red-700 border-red-300",
+};
+
+interface FormState {
+  frecuencia_id: string;
+  bus_id: string;
+  chofer_id: string;
+  fecha: string;        // YYYY-MM-DD
+  hora_salida: string;  // HH:MM (prellenada desde frecuencia)
+  precio_base: string;
+}
+
+const EMPTY_FORM: FormState = {
+  frecuencia_id: "",
+  bus_id: "",
+  chofer_id: "",
+  fecha: "",
+  hora_salida: "",
+  precio_base: "",
 };
 
 export default function RutasPage() {
   const { toast } = useToast();
   const { t } = useLang();
-  const [rutas, setRutas] = useState<Ruta[]>([]);
+
+  const [viajes, setViajes] = useState<ViajeConFrecuencia[]>([]);
+  const [frecuencias, setFrecuencias] = useState<Frecuencia[]>([]);
+  const [buses, setBuses] = useState<Bus[]>([]);
+  const [choferes, setChoferes] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingRuta, setEditingRuta] = useState<Ruta | null>(null);
-  const [form, setForm] = useState<RutaInsert>(EMPTY_FORM);
+  const [editingViaje, setEditingViaje] = useState<ViajeConFrecuencia | null>(null);
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const fetchRutas = useCallback(async () => {
+  // ─── Carga de datos ─────────────────────────────────────────────────────────
+
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      setRutas(await rutasService.getAll());
+      const [v, f, b, u] = await Promise.all([
+        viajesService.getAll(),
+        frecuenciasService.getAll(),
+        busService.getAll(),
+        usuariosService.getAll(),
+      ]);
+      setViajes(v);
+      setFrecuencias(f.filter((fr) => fr.activo));
+      setBuses(b.filter((bus) => bus.activo));
+      setChoferes(u.filter((user) => user.rol === "chofer"));
     } catch {
-      toast({ title: "Error al cargar las rutas", variant: "destructive" });
+      toast({ title: "Error al cargar los viajes", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   }, [toast]);
 
-  useEffect(() => { fetchRutas(); }, [fetchRutas]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  const filtered = rutas.filter((r) =>
-    [r.ciudad_origen, r.ciudad_destino]
-      .some((v) => v?.toLowerCase().includes(search.toLowerCase()))
-  );
+  // Prellenar hora desde frecuencia seleccionada
+  const handleFrecuenciaChange = (id: string) => {
+    const frec = frecuencias.find((f) => String(f.id) === id);
+    setForm((prev) => ({
+      ...prev,
+      frecuencia_id: id,
+      hora_salida: frec?.hora_salida ?? "",
+    }));
+  };
 
   const openCreate = () => {
-    setEditingRuta(null);
+    setEditingViaje(null);
     setForm(EMPTY_FORM);
     setModalOpen(true);
   };
 
-  const openEdit = (ruta: Ruta) => {
-    setEditingRuta(ruta);
+  const openEdit = (v: ViajeConFrecuencia) => {
+    setEditingViaje(v);
+    const d = new Date(v.fecha_salida);
+    const fecha = d.toISOString().split("T")[0];
+    const hora = d.toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit", hour12: false });
     setForm({
-      ciudad_origen: ruta.ciudad_origen,
-      ciudad_destino: ruta.ciudad_destino,
-      distancia_km: ruta.distancia_km,
-      duracion_minutos: ruta.duracion_minutos,
+      frecuencia_id: String(v.frecuencia_id ?? ""),
+      bus_id: String(v.bus_id),
+      chofer_id: v.chofer_id ? String(v.chofer_id) : "",
+      fecha,
+      hora_salida: hora,
+      precio_base: String(v.precio_base),
     });
     setModalOpen(true);
   };
 
+  // ─── Filtro ─────────────────────────────────────────────────────────────────
+
+  // Solo viajes con una frecuencia (ruta) definida; se ocultan los antiguos sin ruta.
+  const viajesConRuta = viajes.filter((v) => v.frecuencias);
+  const filtered = viajesConRuta.filter((v) =>
+    [v.frecuencias?.ciudad_origen, v.frecuencias?.ciudad_destino, v.buses?.placa]
+      .some((val) => val?.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  // ─── Guardar viaje ───────────────────────────────────────────────────────────
+
   const handleSave = async () => {
-    if (!form.ciudad_origen.trim() || !form.ciudad_destino.trim()) {
-      toast({ title: "El origen y destino son obligatorios", variant: "destructive" });
+    if (!form.frecuencia_id || !form.bus_id || !form.fecha || !form.precio_base || !form.chofer_id) {
+      toast({ title: "Todos los campos son obligatorios", variant: "destructive" });
+      return;
+    }
+    const precio = parseFloat(form.precio_base);
+    if (isNaN(precio) || precio <= 0) {
+      toast({ title: "Ingresa un precio válido", variant: "destructive" });
       return;
     }
     try {
       setSaving(true);
-      if (editingRuta) {
-        await rutasService.update(editingRuta.id, form);
-        toast({ title: "Ruta actualizada correctamente" });
+      const fechaSalida = `${form.fecha}T${form.hora_salida}:00-05:00`;
+      if (editingViaje) {
+        await viajesService.update(editingViaje.id, {
+          frecuencia_id: parseInt(form.frecuencia_id),
+          bus_id: parseInt(form.bus_id),
+          chofer_id: parseInt(form.chofer_id),
+          fecha_salida: fechaSalida,
+          precio_base: precio,
+        });
+        toast({ title: "Viaje actualizado correctamente" });
       } else {
-        await rutasService.create(form);
-        toast({ title: "Ruta registrada correctamente" });
+        await viajesService.create({
+          frecuencia_id: parseInt(form.frecuencia_id),
+          bus_id: parseInt(form.bus_id),
+          chofer_id: parseInt(form.chofer_id),
+          fecha_salida: fechaSalida,
+          precio_base: precio,
+        });
+        toast({ title: "Viaje programado correctamente" });
       }
       setModalOpen(false);
-      fetchRutas();
+      setForm(EMPTY_FORM);
+      setEditingViaje(null);
+      fetchData();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Error al guardar";
-      toast({ title: "Error al guardar", description: msg, variant: "destructive" });
+      toast({ title: "Error", description: msg, variant: "destructive" });
     } finally {
       setSaving(false);
     }
   };
 
+  // ─── Eliminar ────────────────────────────────────────────────────────────────
+
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      await rutasService.delete(deleteId);
-      toast({ title: "Ruta eliminada correctamente" });
+      await viajesService.delete(deleteId);
+      toast({ title: "Viaje eliminado" });
       setDeleteId(null);
-      fetchRutas();
+      fetchData();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Error al eliminar la ruta";
-      toast({ title: "Error al eliminar", description: msg, variant: "destructive" });
+      const msg = err instanceof Error ? err.message : "Error al eliminar";
+      toast({ title: "Error", description: msg, variant: "destructive" });
     }
   };
+
+  // ─── UI ──────────────────────────────────────────────────────────────────────
 
   return (
     <div className="p-6 space-y-6">
@@ -115,17 +210,29 @@ export default function RutasPage() {
         <div>
           <h1 className="text-2xl font-bold">{t("dash_routes")}</h1>
           <p className="text-muted-foreground text-sm">
-            {rutas.length} {rutas.length !== 1 ? "rutas registradas" : "ruta registrada"}
+            {viajesConRuta.length} {viajesConRuta.length !== 1 ? "viajes programados" : "viaje programado"}
           </p>
         </div>
-        <Button onClick={openCreate} className="gap-2">
-          <PlusCircle size={18} /> Nueva ruta
+        <Button
+          onClick={openCreate}
+          className="gap-2"
+          disabled={frecuencias.length === 0 || buses.length === 0}
+          title={frecuencias.length === 0 ? "Primero registra una frecuencia" : ""}
+        >
+          <PlusCircle size={18} /> Programar viaje
         </Button>
       </div>
 
+      {/* Aviso si no hay frecuencias */}
+      {frecuencias.length === 0 && !loading && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          No hay frecuencias activas. Ve a <strong>Frecuencias</strong> y registra al menos una antes de programar viajes.
+        </div>
+      )}
+
       {/* Buscador */}
       <Input
-        placeholder="Buscar por origen o destino..."
+        placeholder="Buscar por origen, destino o placa..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="max-w-sm"
@@ -133,11 +240,14 @@ export default function RutasPage() {
 
       {/* Tabla */}
       {loading ? (
-        <p className="text-muted-foreground text-sm">Cargando rutas...</p>
+        <p className="text-muted-foreground text-sm">Cargando viajes...</p>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
-          <p className="text-lg font-medium">No hay rutas registradas</p>
-          <p className="text-sm mt-1">Haz clic en "Nueva ruta" para agregar la primera.</p>
+          <CalendarDays className="mx-auto mb-3 opacity-30" size={40} />
+          <p className="text-lg font-medium">No hay viajes programados</p>
+          <p className="text-sm mt-1">
+            Selecciona una frecuencia, un bus y una fecha para programar el primer viaje.
+          </p>
         </div>
       ) : (
         <Card className="overflow-hidden">
@@ -145,89 +255,192 @@ export default function RutasPage() {
             <table className="w-full text-sm">
               <thead className="border-b bg-muted/40">
                 <tr>
-                  {[
-                    { label: "ID", center: false },
-                    { label: "Ciudad de Origen", center: false },
-                    { label: "Ciudad de Destino", center: false },
-                    { label: "Distancia (km)", center: false },
-                    { label: "Duración (minutos)", center: false },
-                    { label: "Acciones", center: true },
-                  ].map(({ label, center }) => (
+                  {["ID", "Ruta (frecuencia)", "Bus", "Chofer", "Fecha y hora", "Precio", "Estado", "Acciones"].map((h) => (
                     <th
-                      key={label}
-                      className={`px-4 py-3 font-medium text-muted-foreground whitespace-nowrap ${center ? "text-center" : "text-left"}`}
+                      key={h}
+                      className={`px-4 py-3 font-medium text-muted-foreground whitespace-nowrap ${h === "Acciones" ? "text-center" : "text-left"}`}
                     >
-                      {label}
+                      {h}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((ruta, i) => (
-                  <tr key={ruta.id} className={`border-b last:border-0 ${i % 2 === 0 ? "" : "bg-muted/20"}`}>
-                    <td className="px-4 py-3 font-mono text-muted-foreground">{ruta.id}</td>
-                    <td className="px-4 py-3 font-semibold">{ruta.ciudad_origen}</td>
-                    <td className="px-4 py-3 font-semibold">{ruta.ciudad_destino}</td>
-                    <td className="px-4 py-3">{ruta.distancia_km ? `${ruta.distancia_km} km` : "—"}</td>
-                    <td className="px-4 py-3">{ruta.duracion_minutos ? `${ruta.duracion_minutos} min` : "—"}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-center gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => openEdit(ruta)}>
-                          <Pencil size={15} />
-                        </Button>
-                        <Button size="icon" variant="ghost"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setDeleteId(ruta.id)}>
-                          <Trash2 size={15} />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {filtered.map((v, i) => {
+                  const frec = v.frecuencias;
+                  const bus = v.buses;
+                  const chofer = v.chofer;
+                  const fechaLocal = new Date(v.fecha_salida).toLocaleString("es-EC", {
+                    dateStyle: "medium", timeStyle: "short",
+                  });
+                  return (
+                    <tr key={v.id} className={`border-b last:border-0 ${i % 2 !== 0 ? "bg-muted/20" : ""}`}>
+                      <td className="px-4 py-3 font-mono text-muted-foreground">{v.id}</td>
+                      <td className="px-4 py-3">
+                        {frec ? (
+                          <span className="flex items-center gap-1.5 font-semibold">
+                            <MapPin size={13} className="text-muted-foreground shrink-0" />
+                            {frec.ciudad_origen} → {frec.ciudad_destino}
+                          </span>
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        {bus ? (
+                          <span className="flex items-center gap-1.5">
+                            <BusIcon size={13} className="text-muted-foreground" />
+                            <span className="font-medium">{bus.placa}</span>
+                            <Badge variant="outline" className="text-[10px]">
+                              {TIPO_LABEL[bus.tipo] ?? bus.tipo}
+                            </Badge>
+                          </span>
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        {chofer ? (
+                          <span className="font-medium">{chofer.full_name}</span>
+                        ) : (
+                          <span className="text-muted-foreground italic">Sin asignar</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="flex items-center gap-1.5">
+                          <Clock size={13} className="text-muted-foreground" />
+                          {fechaLocal}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-semibold">${v.precio_base.toFixed(2)}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full border ${ESTADO_BADGE[v.estado] ?? "bg-muted text-muted-foreground"}`}>
+                          {v.estado}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            size="icon" variant="ghost"
+                            title="Editar viaje"
+                            onClick={() => openEdit(v)}
+                            disabled={v.estado !== "programado"}
+                          >
+                            <Pencil size={15} />
+                          </Button>
+                          <Button
+                            size="icon" variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            title="Eliminar viaje"
+                            onClick={() => setDeleteId(v.id)}
+                            disabled={v.estado !== "programado"}
+                          >
+                            <Trash2 size={15} />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </Card>
       )}
 
-      {/* Modal crear / editar */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+      {/* Modal programar viaje */}
+      <Dialog open={modalOpen} onOpenChange={(o) => { setModalOpen(o); if (!o) setEditingViaje(null); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingRuta ? "Editar ruta" : "Registrar nueva ruta"}</DialogTitle>
+            <DialogTitle>{editingViaje ? "Editar viaje" : "Programar nuevo viaje"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+
+            {/* Frecuencia */}
             <div className="space-y-2">
-              <Label>Ciudad de origen *</Label>
-              <Input placeholder="Ej: Quito"
-                value={form.ciudad_origen}
-                onChange={(e) => setForm({ ...form, ciudad_origen: e.target.value })} />
+              <Label>Frecuencia *</Label>
+              <Select value={form.frecuencia_id} onValueChange={handleFrecuenciaChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona una frecuencia" />
+                </SelectTrigger>
+                <SelectContent>
+                  {frecuencias.map((f) => (
+                    <SelectItem key={f.id} value={String(f.id)}>
+                      {f.ciudad_origen} → {f.ciudad_destino} ({f.hora_salida})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
+            {/* Bus */}
             <div className="space-y-2">
-              <Label>Ciudad de destino *</Label>
-              <Input placeholder="Ej: Guayaquil"
-                value={form.ciudad_destino}
-                onChange={(e) => setForm({ ...form, ciudad_destino: e.target.value })} />
+              <Label>Bus *</Label>
+              <Select value={form.bus_id} onValueChange={(v) => setForm({ ...form, bus_id: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un bus" />
+                </SelectTrigger>
+                <SelectContent>
+                  {buses.map((b) => (
+                    <SelectItem key={b.id} value={String(b.id)}>
+                      {b.placa} — {TIPO_LABEL[b.tipo] ?? b.tipo} (cap. {b.capacidad})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+
+            {/* Chofer */}
+            <div className="space-y-2">
+              <Label>Chofer *</Label>
+              <Select value={form.chofer_id} onValueChange={(v) => setForm({ ...form, chofer_id: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un chofer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {choferes.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.full_name} ({c.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Fecha */}
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Distancia (km)</Label>
-                <Input type="number" min={1} placeholder="Ej: 420"
-                  value={form.distancia_km || ""}
-                  onChange={(e) => setForm({ ...form, distancia_km: parseInt(e.target.value) || null })} />
+                <Label>Fecha *</Label>
+                <Input
+                  type="date"
+                  value={form.fecha}
+                  min={new Date().toISOString().split("T")[0]}
+                  onChange={(e) => setForm({ ...form, fecha: e.target.value })}
+                />
               </div>
               <div className="space-y-2">
-                <Label>Duración (minutos)</Label>
-                <Input type="number" min={1} placeholder="Ej: 480"
-                  value={form.duracion_minutos || ""}
-                  onChange={(e) => setForm({ ...form, duracion_minutos: parseInt(e.target.value) || null })} />
+                <Label>Hora de salida *</Label>
+                <Input
+                  type="time"
+                  value={form.hora_salida}
+                  onChange={(e) => setForm({ ...form, hora_salida: e.target.value })}
+                />
               </div>
+            </div>
+
+            {/* Costo */}
+            <div className="space-y-2">
+              <Label>Precio base (USD) *</Label>
+              <Input
+                type="number"
+                min={0.01}
+                step={0.01}
+                placeholder="Ej: 4.50"
+                value={form.precio_base}
+                onChange={(e) => setForm({ ...form, precio_base: e.target.value })}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => { setModalOpen(false); setEditingViaje(null); }}>Cancelar</Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Guardando..." : editingRuta ? "Guardar cambios" : "Registrar ruta"}
+              {saving ? "Guardando..." : editingViaje ? "Guardar cambios" : "Programar viaje"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -237,15 +450,17 @@ export default function RutasPage() {
       <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar esta ruta?</AlertDialogTitle>
+            <AlertDialogTitle>¿Eliminar este viaje?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Los viajes asignados a esta ruta podrían perder su referencia.
+              Esta acción no se puede deshacer. Solo se pueden eliminar viajes con estado "programado".
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Sí, eliminar
             </AlertDialogAction>
           </AlertDialogFooter>

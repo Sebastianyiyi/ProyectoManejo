@@ -1,7 +1,7 @@
 import { Navigate, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLang } from "@/contexts/LanguageContext";
-import { Bus, LayoutDashboard, Map, Users, Ticket, LogOut, Building2, Settings } from "lucide-react";
+import { Bus, LayoutDashboard, Map, Users, LogOut, Building2, Settings, Clock, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function DashboardLayout() {
@@ -11,11 +11,12 @@ export default function DashboardLayout() {
 
   const NAV = [
     { to: "/dashboard",             label: t("dash_home"),        icon: LayoutDashboard, end: true },
-    { to: "/dashboard/cooperativa", label: t("dash_cooperative"), icon: Building2 },
-    { to: "/dashboard/buses",       label: t("dash_buses"),       icon: Bus },
-    { to: "/dashboard/rutas",       label: t("dash_routes"),      icon: Map },
-    { to: "/dashboard/usuarios",    label: t("dash_users"),       icon: Users, adminOnly: true },
-    { to: "/dashboard/boletos",     label: t("dash_tickets"),     icon: Ticket },
+    { to: "/dashboard/cooperativa", label: t("dash_cooperative"), icon: Building2, adminOnly: true },
+    { to: "/dashboard/buses",        label: t("dash_buses"),       icon: Bus },
+    { to: "/dashboard/frecuencias",   label: "Frecuencias",         icon: Clock },
+    { to: "/dashboard/rutas",         label: t("dash_routes"),      icon: Map },
+    { to: "/dashboard/boletos",       label: "Boletos",             icon: Ticket },
+    { to: "/dashboard/usuarios",      label: t("dash_users"),       icon: Users, adminOnly: true },
   ];
 
   if (loading) return <div className="flex h-screen items-center justify-center">{t("dash_welcome")}...</div>;

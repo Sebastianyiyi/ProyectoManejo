@@ -54,7 +54,7 @@ export async function getAsientosConDisponibilidad(viajeId: number): Promise<Asi
     .from("detalle_reserva")
     .select("asiento_id, reservas!inner(viaje_id, estado)")
     .eq("reservas.viaje_id", viajeId)
-    .in("reservas.estado", ["pendiente", "confirmada"]);
+    .in("reservas.estado", ["pendiente_pago", "pendiente", "confirmada"]);
 
   const ocupadosIds = new Set((reservados ?? []).map((r: any) => r.asiento_id));
 

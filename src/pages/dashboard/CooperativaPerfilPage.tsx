@@ -2,10 +2,33 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { cooperativaService } from "@/lib/cooperativaService";
 import type { Cooperativa } from "@/lib/cooperativaService";
+import { useTheme } from "@/contexts/ThemeContext";
+import type { ThemeColors } from "@/contexts/ThemeContext";
 import { useLang } from "@/contexts/LanguageContext";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Bus, Map, CalendarClock, Ticket, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import {
+  Bus, Map, CalendarClock, Ticket, Clock,
+  CheckCircle, AlertCircle, Save,
+} from "lucide-react";
+
+// ─── Paleta predefinida ───────────────────────────────────────────────────────
+
+const PALETTE: { label: string; primary: string; secondary: string }[] = [
+  { label: "Azul",    primary: "#2563eb", secondary: "#64748b" },
+  { label: "Verde",   primary: "#16a34a", secondary: "#64748b" },
+  { label: "Violeta", primary: "#7c3aed", secondary: "#64748b" },
+  { label: "Rojo",    primary: "#dc2626", secondary: "#64748b" },
+  { label: "Naranja", primary: "#ea580c", secondary: "#64748b" },
+  { label: "Teal",    primary: "#0d9488", secondary: "#64748b" },
+  { label: "Rosa",    primary: "#db2777", secondary: "#64748b" },
+  { label: "Índigo",  primary: "#4f46e5", secondary: "#64748b" },
+];
+
+// ─── Tipos locales ────────────────────────────────────────────────────────────
 
 interface Stats {
   buses: number;
@@ -23,11 +46,10 @@ interface ViajeProximo {
   buses: { placa: string } | null;
 }
 
+// ─── Componentes auxiliares ───────────────────────────────────────────────────
+
 function StatCard({
-  icon: Icon,
-  label,
-  value,
-  color,
+  icon: Icon, label, value, color,
 }: {
   icon: React.ElementType;
   label: string;
@@ -49,17 +71,25 @@ function StatCard({
 
 const estadoBadgeClass: Record<string, string> = {
   verificada: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  pendiente: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
+  pendiente:  "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
   suspendida: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
 };
+
+// ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function CooperativaPerfilPage() {
   const { toast } = useToast();
   const { t } = useLang();
+  const { colors, setColors, savingColors } = useTheme();
+
   const [cooperativa, setCooperativa] = useState<Cooperativa | null>(null);
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [proximos, setProximos] = useState<ViajeProximo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats]             = useState<Stats | null>(null);
+  const [proximos, setProximos]       = useState<ViajeProximo[]>([]);
+  const [loading, setLoading]         = useState(true);
+
+  const [draftColors, setDraftColors] = useState<ThemeColors>(colors);
+
+  // ── Carga inicial ──────────────────────────────────────────────────────────
 
   useEffect(() => {
     async function load() {
@@ -90,11 +120,11 @@ export default function CooperativaPerfilPage() {
         ]);
 
         setStats({
-          buses: buses ?? 0,
-          rutas: rutas ?? 0,
-          viajesProgramados: viajesProg ?? 0,
+          buses:              buses ?? 0,
+          rutas:              rutas ?? 0,
+          viajesProgramados:  viajesProg ?? 0,
           reservasPendientes: reservasPend ?? 0,
-          boletosEmitidos: boletos ?? 0,
+          boletosEmitidos:    boletos ?? 0,
         });
         setProximos((proximosViajes as unknown as ViajeProximo[]) ?? []);
       } catch {
@@ -106,59 +136,176 @@ export default function CooperativaPerfilPage() {
     load();
   }, [toast]);
 
+  useEffect(() => { setDraftColors(colors); }, [colors]);
+
+  // ── Guardar colores ────────────────────────────────────────────────────────
+
+  async function handleSaveColors() {
+    try {
+      await setColors(draftColors);
+      setCooperativa((prev) =>
+        prev
+          ? { ...prev, color_primario: draftColors.primary, color_secundario: draftColors.secondary }
+          : prev
+      );
+      toast({ title: "Colores de tema guardados" });
+    } catch {
+      toast({ title: "Error al guardar los colores", variant: "destructive" });
+    }
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
   if (loading) return <div className="p-6 text-muted-foreground text-sm">{t("coop_loading")}</div>;
 
   if (!cooperativa) return (
-    <div className="p-6 text-muted-foreground text-sm">
-      {t("coop_not_found")}
-    </div>
+    <div className="p-6 text-muted-foreground text-sm">{t("coop_not_found")}</div>
   );
 
-  const estadoLabelKey = cooperativa.estado === "verificada"
-    ? "coop_estado_verificada"
-    : cooperativa.estado === "suspendida"
-    ? "coop_estado_suspendida"
-    : "coop_estado_pendiente";
+  const estadoLabelKey =
+    cooperativa.estado === "verificada" ? "coop_estado_verificada" :
+    cooperativa.estado === "suspendida" ? "coop_estado_suspendida" :
+    "coop_estado_pendiente";
 
   const badgeClass = estadoBadgeClass[cooperativa.estado] ?? estadoBadgeClass.pendiente;
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header cooperativa */}
-      <div className="flex items-start gap-4">
-        {cooperativa.logo_url ? (
-          <img src={cooperativa.logo_url} alt="logo" className="h-14 w-14 rounded-lg object-contain border" />
-        ) : (
-          <div className="h-14 w-14 rounded-lg bg-primary/10 grid place-items-center">
-            <Bus size={24} className="text-primary" />
+
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          {cooperativa.logo_url ? (
+            <img src={cooperativa.logo_url} alt="logo" className="h-14 w-14 rounded-lg object-contain border" />
+          ) : (
+            <div className="h-14 w-14 rounded-lg bg-primary/10 grid place-items-center">
+              <Bus size={24} className="text-primary" />
+            </div>
+          )}
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">{cooperativa.nombre}</h1>
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badgeClass}`}>
+                {t(estadoLabelKey)}
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              RUC: {cooperativa.ruc}
+              {cooperativa.ciudad_principal && ` · ${cooperativa.ciudad_principal}`}
+            </p>
+            {cooperativa.telefono && (
+              <p className="text-sm text-muted-foreground">📞 {cooperativa.telefono}</p>
+            )}
+            {cooperativa.direccion && (
+              <p className="text-sm text-muted-foreground">📍 {cooperativa.direccion}</p>
+            )}
           </div>
-        )}
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">{cooperativa.nombre}</h1>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badgeClass}`}>
-              {t(estadoLabelKey)}
-            </span>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            RUC: {cooperativa.ruc}
-            {cooperativa.ciudad_principal && ` · ${cooperativa.ciudad_principal}`}
-          </p>
         </div>
       </div>
 
-      {/* Tarjetas de estadísticas */}
+      {/* ── Estadísticas ── */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          <StatCard icon={Bus} label={t("coop_stat_buses")} value={stats.buses} color="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" />
-          <StatCard icon={Map} label={t("coop_stat_rutas")} value={stats.rutas} color="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400" />
-          <StatCard icon={CalendarClock} label={t("coop_stat_viajes")} value={stats.viajesProgramados} color="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400" />
-          <StatCard icon={Clock} label={t("coop_stat_reservas")} value={stats.reservasPendientes} color="bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" />
-          <StatCard icon={Ticket} label={t("coop_stat_boletos")} value={stats.boletosEmitidos} color="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" />
+          <StatCard icon={Bus}           label={t("coop_stat_buses")}    value={stats.buses}              color="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" />
+          <StatCard icon={Map}           label={t("coop_stat_rutas")}    value={stats.rutas}              color="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400" />
+          <StatCard icon={CalendarClock} label={t("coop_stat_viajes")}   value={stats.viajesProgramados}  color="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400" />
+          <StatCard icon={Clock}         label={t("coop_stat_reservas")} value={stats.reservasPendientes} color="bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" />
+          <StatCard icon={Ticket}        label={t("coop_stat_boletos")}  value={stats.boletosEmitidos}    color="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" />
         </div>
       )}
 
-      {/* Próximos viajes */}
+      {/* ── Tema de colores ── */}
+      <Card className="p-5 space-y-4">
+        <h2 className="text-sm font-semibold">Tema de colores</h2>
+
+        <div>
+          <p className="text-xs text-muted-foreground mb-2">Paleta rápida</p>
+          <div className="flex flex-wrap gap-2">
+            {PALETTE.map((p) => {
+              const active = draftColors.primary === p.primary;
+              return (
+                <button
+                  key={p.primary}
+                  title={p.label}
+                  onClick={() => setDraftColors({ primary: p.primary, secondary: p.secondary })}
+                  className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${
+                    active ? "border-foreground scale-110" : "border-transparent"
+                  }`}
+                  style={{ background: p.primary }}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <Label htmlFor="color-primary">Color primario</Label>
+            <div className="flex items-center gap-2">
+              <input
+                id="color-primary"
+                type="color"
+                value={draftColors.primary}
+                onChange={(e) => setDraftColors((c) => ({ ...c, primary: e.target.value }))}
+                className="w-10 h-9 rounded cursor-pointer border border-input bg-transparent p-0.5"
+              />
+              <Input
+                value={draftColors.primary}
+                onChange={(e) => setDraftColors((c) => ({ ...c, primary: e.target.value }))}
+                placeholder="#2563eb"
+                className="font-mono text-sm"
+                maxLength={7}
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="color-secondary">Color secundario</Label>
+            <div className="flex items-center gap-2">
+              <input
+                id="color-secondary"
+                type="color"
+                value={draftColors.secondary}
+                onChange={(e) => setDraftColors((c) => ({ ...c, secondary: e.target.value }))}
+                className="w-10 h-9 rounded cursor-pointer border border-input bg-transparent p-0.5"
+              />
+              <Input
+                value={draftColors.secondary}
+                onChange={(e) => setDraftColors((c) => ({ ...c, secondary: e.target.value }))}
+                placeholder="#64748b"
+                className="font-mono text-sm"
+                maxLength={7}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs text-muted-foreground mb-2">Vista previa</p>
+          <div className="flex items-center gap-3">
+            <div
+              className="h-9 px-4 rounded-md text-white text-sm font-medium grid place-items-center"
+              style={{ background: draftColors.primary }}
+            >
+              Botón primario
+            </div>
+            <div
+              className="h-9 px-4 rounded-md text-white text-sm font-medium grid place-items-center"
+              style={{ background: draftColors.secondary }}
+            >
+              Botón secundario
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <Button size="sm" onClick={handleSaveColors} disabled={savingColors}>
+            <Save size={14} className="mr-1" />
+            {savingColors ? "Guardando..." : "Guardar tema"}
+          </Button>
+        </div>
+      </Card>
+
+      {/* ── Próximos viajes ── */}
       <div>
         <h2 className="text-base font-semibold mb-3 flex items-center gap-2">
           <CheckCircle size={16} className="text-primary" />

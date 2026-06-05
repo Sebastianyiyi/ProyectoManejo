@@ -93,3 +93,21 @@
     cursor: pointer;
   }
 }
+
+/* Impresión del boleto: ocultar navegación, footer y elementos no imprimibles
+   para que solo salga el comprobante sin solapamientos ni franjas en blanco. */
+@media print {
+  header,
+  footer,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  /* El QR debe imprimirse en negro sólido sobre blanco */
+  svg {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
