@@ -22,6 +22,75 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, Pencil, Trash2, Power, Image as ImageIcon, Upload, X, Loader2 } from "lucide-react";
 
+// ── Importar el nuevo configurador de asientos ──────────────────────────────
+import {
+  SeatConfigurator,
+  defaultSeatConfig,
+  type SeatConfiguratorValue,
+  type AsientoConfig,
+} from "@/components/ui/SeatConfigurator";
+import { supabase } from "@/integrations/supabase/client";
+
+// ─────────────────────────────────────────────
+//  Guardar asientos en Supabase
+// ─────────────────────────────────────────────
+
+async function guardarAsientos(busId: number, asientos: AsientoConfig[]) {
+  if (asientos.length === 0) return;
+
+  // 1. Obtener asientos existentes del bus
+  const { data: existentes, error: fetchErr } = await supabase
+    .from("asientos")
+    .select("id, numero")
+    .eq("bus_id", busId);
+  if (fetchErr) throw fetchErr;
+
+  const existenteMap = new Map<number, number>(
+    (existentes ?? []).map((e: any) => [e.numero, e.id])
+  );
+  const nuevosNumeros = new Set(asientos.map((a) => a.numero));
+
+  // 2. Actualizar los que ya existen
+  for (const a of asientos.filter((a) => existenteMap.has(a.numero))) {
+    const { error } = await supabase
+      .from("asientos")
+      .update({ fila: a.fila, columna: a.columna, piso: a.piso, activo: a.activo })
+      .eq("id", existenteMap.get(a.numero)!);
+    if (error) throw error;
+  }
+
+  // 3. Insertar los nuevos
+  const toInsert = asientos.filter((a) => !existenteMap.has(a.numero));
+  if (toInsert.length > 0) {
+    const rows = toInsert.map((a) => ({
+      bus_id: busId,
+      numero: a.numero,
+      fila: a.fila,
+      columna: a.columna,
+      piso: a.piso,
+      activo: a.activo,
+    }));
+    const { error } = await supabase.from("asientos").insert(rows);
+    if (error) throw error;
+  }
+
+  // 4. Desactivar los que ya no están en la nueva config (NO eliminar, respeta FK)
+  const idsADesactivar = (existentes ?? [])
+    .filter((e: any) => !nuevosNumeros.has(e.numero))
+    .map((e: any) => e.id);
+  if (idsADesactivar.length > 0) {
+    const { error } = await supabase
+      .from("asientos")
+      .update({ activo: false })
+      .in("id", idsADesactivar);
+    if (error) throw error;
+  }
+}
+
+// ─────────────────────────────────────────────
+//  Form
+// ─────────────────────────────────────────────
+
 const EMPTY_FORM: Omit<BusInsert, "cooperativa_id" | "numero"> = {
   placa: "",
   capacidad: 40,
@@ -43,6 +112,9 @@ export default function BusesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingBus, setEditingBus] = useState<Bus | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [seatConfig, setSeatConfig] = useState<SeatConfiguratorValue>(
+    defaultSeatConfig()
+  );
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -62,7 +134,6 @@ export default function BusesPage() {
     }
   }, [toast, t]);
 
-  // Recarga la lista cuando se monta o cuando cambia la cooperativa.
   useEffect(() => { fetchBuses(); }, [fetchBuses, cooperativa?.id]);
 
   const filtered = buses.filter((b) =>
@@ -73,6 +144,7 @@ export default function BusesPage() {
   const openCreate = () => {
     setEditingBus(null);
     setForm(EMPTY_FORM);
+    setSeatConfig(defaultSeatConfig());
     setModalOpen(true);
   };
 
@@ -87,7 +159,21 @@ export default function BusesPage() {
       foto_url: bus.foto_url ?? "",
       activo: bus.activo,
     });
+    // Al editar, inicializamos con la config por defecto del tipo del bus.
+    // Idealmente aquí se cargarían los asientos existentes desde Supabase.
+    setSeatConfig(defaultSeatConfig());
     setModalOpen(true);
+  };
+
+  const handleTipoChange = (nuevoTipo: TipoBus) => {
+    setForm((prev) => ({ ...prev, tipo: nuevoTipo }));
+  };
+
+  // Cuando cambia el seat config, sincronizamos capacidad
+  const handleSeatConfigChange = (cfg: SeatConfiguratorValue) => {
+    setSeatConfig(cfg);
+    const capacidad = cfg.asientos_piso1 + (cfg.doble_piso ? cfg.asientos_piso2 : 0);
+    setForm((prev) => ({ ...prev, capacidad }));
   };
 
   const handleSave = async () => {
@@ -102,10 +188,15 @@ export default function BusesPage() {
     try {
       setSaving(true);
       if (editingBus) {
-        await busService.update(editingBus.id, form);
+        await busService.update(editingBus.id, { ...form, capacidad: seatConfig.asientos_piso1 + (seatConfig.doble_piso ? seatConfig.asientos_piso2 : 0) });
+        await guardarAsientos(editingBus.id, seatConfig.asientos);
         toast({ title: t("buses_updated") });
       } else {
-        await busService.create(form);
+        const nuevoBus = await busService.create({
+          ...form,
+          capacidad: seatConfig.asientos_piso1 + (seatConfig.doble_piso ? seatConfig.asientos_piso2 : 0),
+        });
+        await guardarAsientos(nuevoBus.id, seatConfig.asientos);
         toast({ title: t("buses_created") });
       }
       setModalOpen(false);
@@ -286,124 +377,155 @@ export default function BusesPage() {
         </Card>
       )}
 
-      {/* Modal crear / editar */}
+      {/* ── Modal crear / editar ── */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-lg">
+        {/* Ampliado a max-w-3xl para dar espacio al configurador de asientos */}
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingBus ? t("buses_modal_edit") : t("buses_modal_create")}</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-2">
-            <div className="space-y-1">
-              <Label>{t("buses_label_plate")}</Label>
-              <Input placeholder="Ej: ABC-1234"
-                value={form.placa}
-                onChange={(e) => setForm({ ...form, placa: e.target.value.toUpperCase() })} />
-            </div>
-            <div className="space-y-1">
-              <Label>{t("buses_label_type")}</Label>
-              <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v as TipoBus })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="economico">{t("buses_type_economico")}</SelectItem>
-                  <SelectItem value="ejecutivo">{t("buses_type_ejecutivo")}</SelectItem>
-                  <SelectItem value="premium">{t("buses_type_premium")}</SelectItem>
-                  <SelectItem value="doble_piso">{t("buses_type_doble_piso")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label>{t("buses_label_capacity")}</Label>
-              <Input type="number" min={1}
-                value={form.capacidad}
-                onChange={(e) => setForm({ ...form, capacidad: parseInt(e.target.value) || 0 })} />
-            </div>
-            <div className="space-y-1">
-              <Label>{t("buses_label_chassis")}</Label>
-              <Select
-                value={form.marca_chasis ?? ""}
-                onValueChange={(v) => setForm({ ...form, marca_chasis: v })}
-              >
-                <SelectTrigger><SelectValue placeholder={t("buses_select_brand")} /></SelectTrigger>
-                <SelectContent>
-                  {MARCAS_CHASIS.map((marca) => (
-                    <SelectItem key={marca} value={marca}>{marca}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label>{t("buses_label_body")}</Label>
-              <Select
-                value={form.marca_carroceria ?? ""}
-                onValueChange={(v) => setForm({ ...form, marca_carroceria: v })}
-              >
-                <SelectTrigger><SelectValue placeholder={t("buses_select_brand")} /></SelectTrigger>
-                <SelectContent>
-                  {MARCAS_CARROCERIA.map((marca) => (
-                    <SelectItem key={marca} value={marca}>{marca}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-2 space-y-1">
-              <Label>{t("buses_label_photo")}</Label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
-                onChange={(e) => {
-                  handleFotoFile(e.target.files?.[0]);
-                  e.target.value = "";
-                }}
-              />
-              {form.foto_url ? (
-                <div className="relative rounded-md border bg-muted/20 p-2">
-                  <img
-                    src={form.foto_url}
-                    alt="bus"
-                    className="mx-auto max-h-40 object-contain rounded"
-                  />
-                  <div className="flex justify-center gap-2 mt-2">
-                    <Button type="button" variant="outline" size="sm" className="gap-1"
-                      disabled={uploadingFoto}
-                      onClick={() => fileInputRef.current?.click()}>
-                      <Upload size={14} /> {t("buses_upload_change")}
-                    </Button>
-                    <Button type="button" variant="ghost" size="sm" className="gap-1 text-destructive"
-                      onClick={() => setForm({ ...form, foto_url: "" })}>
-                      <X size={14} /> {t("buses_upload_remove")}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  disabled={uploadingFoto}
-                  onClick={() => fileInputRef.current?.click()}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    handleFotoFile(e.dataTransfer.files?.[0]);
-                  }}
-                  className="w-full flex flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed bg-muted/10 py-6 text-muted-foreground hover:bg-muted/20 transition-colors disabled:opacity-60"
+
+          <div className="space-y-6 py-2">
+            {/* ── Datos del bus ── */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label>{t("buses_label_plate")}</Label>
+                <Input placeholder="Ej: ABC-1234"
+                  value={form.placa}
+                  onChange={(e) => setForm({ ...form, placa: e.target.value.toUpperCase() })} />
+              </div>
+
+              <div className="space-y-1">
+                <Label>{t("buses_label_type")}</Label>
+                <Select
+                  value={form.tipo}
+                  onValueChange={(v) => handleTipoChange(v as TipoBus)}
                 >
-                  {uploadingFoto ? (
-                    <>
-                      <Loader2 size={20} className="animate-spin" />
-                      <span className="text-sm">{t("buses_upload_uploading")}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Upload size={20} />
-                      <span className="text-sm">{t("buses_upload_hint")}</span>
-                      <span className="text-xs">{t("buses_upload_formats")}</span>
-                    </>
-                  )}
-                </button>
-              )}
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="economico">{t("buses_type_economico")}</SelectItem>
+                    <SelectItem value="ejecutivo">{t("buses_type_ejecutivo")}</SelectItem>
+                    <SelectItem value="premium">{t("buses_type_premium")}</SelectItem>
+                    <SelectItem value="doble_piso">{t("buses_type_doble_piso")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Capacidad — ahora de solo lectura (calculada desde los asientos) */}
+              <div className="space-y-1">
+                <Label className="flex items-center gap-1">
+                  {t("buses_label_capacity")}
+                  <span className="text-[10px] text-muted-foreground font-normal">(auto)</span>
+                </Label>
+                <Input
+                  type="number"
+                  value={form.capacidad}
+                  readOnly
+                  className="bg-muted/40 cursor-not-allowed"
+                  title="La capacidad se calcula automáticamente desde los asientos activos"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label>{t("buses_label_chassis")}</Label>
+                <Select
+                  value={form.marca_chasis ?? ""}
+                  onValueChange={(v) => setForm({ ...form, marca_chasis: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder={t("buses_select_brand")} /></SelectTrigger>
+                  <SelectContent>
+                    {MARCAS_CHASIS.map((marca) => (
+                      <SelectItem key={marca} value={marca}>{marca}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label>{t("buses_label_body")}</Label>
+                <Select
+                  value={form.marca_carroceria ?? ""}
+                  onValueChange={(v) => setForm({ ...form, marca_carroceria: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder={t("buses_select_brand")} /></SelectTrigger>
+                  <SelectContent>
+                    {MARCAS_CARROCERIA.map((marca) => (
+                      <SelectItem key={marca} value={marca}>{marca}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="col-span-2 space-y-1">
+                <Label>{t("buses_label_photo")}</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    handleFotoFile(e.target.files?.[0]);
+                    e.target.value = "";
+                  }}
+                />
+                {form.foto_url ? (
+                  <div className="relative rounded-md border bg-muted/20 p-2">
+                    <img
+                      src={form.foto_url}
+                      alt="bus"
+                      className="mx-auto max-h-40 object-contain rounded"
+                    />
+                    <div className="flex justify-center gap-2 mt-2">
+                      <Button type="button" variant="outline" size="sm" className="gap-1"
+                        disabled={uploadingFoto}
+                        onClick={() => fileInputRef.current?.click()}>
+                        <Upload size={14} /> {t("buses_upload_change")}
+                      </Button>
+                      <Button type="button" variant="ghost" size="sm" className="gap-1 text-destructive"
+                        onClick={() => setForm({ ...form, foto_url: "" })}>
+                        <X size={14} /> {t("buses_upload_remove")}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={uploadingFoto}
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      handleFotoFile(e.dataTransfer.files?.[0]);
+                    }}
+                    className="w-full flex flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed bg-muted/10 py-6 text-muted-foreground hover:bg-muted/20 transition-colors disabled:opacity-60"
+                  >
+                    {uploadingFoto ? (
+                      <>
+                        <Loader2 size={20} className="animate-spin" />
+                        <span className="text-sm">{t("buses_upload_uploading")}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={20} />
+                        <span className="text-sm">{t("buses_upload_hint")}</span>
+                        <span className="text-xs">{t("buses_upload_formats")}</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* ── Separador ── */}
+            <div className="border-t pt-4">
+              {/* ── Configurador de asientos ── */}
+              <SeatConfigurator
+                value={seatConfig}
+                onChange={handleSeatConfigChange}
+              />
             </div>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)}>{t("buses_cancel")}</Button>
             <Button onClick={handleSave} disabled={saving}>
@@ -413,12 +535,12 @@ export default function BusesPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Preview foto */}
       <Dialog open={!!previewImage} onOpenChange={(open) => { if (!open) { setPreviewImage(null); setPreviewError(null); } }}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>{t("buses_preview_title")}</DialogTitle>
           </DialogHeader>
-
           {previewImage && (
             <div className="overflow-hidden rounded-md border bg-muted/20 p-4">
               <img
@@ -428,14 +550,10 @@ export default function BusesPage() {
                 onLoad={() => setPreviewError(null)}
                 onError={() => setPreviewError("error")}
               />
-
               {previewError ? (
                 <div className="mt-4 text-center">
                   <p className="text-sm text-destructive">{t("buses_img_error")}</p>
                   <p className="text-xs text-muted-foreground break-all mt-2">{previewImage}</p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {t("buses_img_error_hint")}
-                  </p>
                 </div>
               ) : null}
             </div>
