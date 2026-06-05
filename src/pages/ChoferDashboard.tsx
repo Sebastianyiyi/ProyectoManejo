@@ -1563,7 +1563,7 @@ export default function ChoferDashboard() {
 
                 <div>
                   <p className="text-sm text-muted-foreground">{t("chofer_stat_assigned")}</p>
-                  <p className="text-2xl font-bold">{viajes.length}</p>
+                  <p className="text-2xl font-bold">{viajesEnCurso.length}</p>
                 </div>
               </div>
             </Card>
