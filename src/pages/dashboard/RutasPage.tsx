@@ -22,7 +22,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Trash2, Bus as BusIcon, CalendarDays, Clock, MapPin } from "lucide-react";
+import { PlusCircle, Trash2, Pencil, Bus as BusIcon, CalendarDays, Clock, MapPin } from "lucide-react";
 
 // ─── Config visual tipo de bus ────────────────────────────────────────────────
 const TIPO_LABEL: Record<string, string> = {
@@ -65,6 +65,7 @@ export default function RutasPage() {
   const [search, setSearch] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingViaje, setEditingViaje] = useState<ViajeConFrecuencia | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -101,6 +102,27 @@ export default function RutasPage() {
     }));
   };
 
+  const openCreate = () => {
+    setEditingViaje(null);
+    setForm(EMPTY_FORM);
+    setModalOpen(true);
+  };
+
+  const openEdit = (v: ViajeConFrecuencia) => {
+    setEditingViaje(v);
+    const d = new Date(v.fecha_salida);
+    const fecha = d.toISOString().split("T")[0];
+    const hora = d.toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit", hour12: false });
+    setForm({
+      frecuencia_id: String(v.frecuencia_id ?? ""),
+      bus_id: String(v.bus_id),
+      fecha,
+      hora_salida: hora,
+      precio_base: String(v.precio_base),
+    });
+    setModalOpen(true);
+  };
+
   // ─── Filtro ─────────────────────────────────────────────────────────────────
 
   const filtered = viajes.filter((v) =>
@@ -123,15 +145,26 @@ export default function RutasPage() {
     try {
       setSaving(true);
       const fechaSalida = `${form.fecha}T${form.hora_salida}:00-05:00`;
-      await viajesService.create({
-        frecuencia_id: parseInt(form.frecuencia_id),
-        bus_id: parseInt(form.bus_id),
-        fecha_salida: fechaSalida,
-        precio_base: precio,
-      });
-      toast({ title: "Viaje programado correctamente" });
+      if (editingViaje) {
+        await viajesService.update(editingViaje.id, {
+          frecuencia_id: parseInt(form.frecuencia_id),
+          bus_id: parseInt(form.bus_id),
+          fecha_salida: fechaSalida,
+          precio_base: precio,
+        });
+        toast({ title: "Viaje actualizado correctamente" });
+      } else {
+        await viajesService.create({
+          frecuencia_id: parseInt(form.frecuencia_id),
+          bus_id: parseInt(form.bus_id),
+          fecha_salida: fechaSalida,
+          precio_base: precio,
+        });
+        toast({ title: "Viaje programado correctamente" });
+      }
       setModalOpen(false);
       setForm(EMPTY_FORM);
+      setEditingViaje(null);
       fetchData();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Error al guardar";
@@ -169,7 +202,7 @@ export default function RutasPage() {
           </p>
         </div>
         <Button
-          onClick={() => { setForm(EMPTY_FORM); setModalOpen(true); }}
+          onClick={openCreate}
           className="gap-2"
           disabled={frecuencias.length === 0 || buses.length === 0}
           title={frecuencias.length === 0 ? "Primero registra una frecuencia" : ""}
@@ -262,7 +295,15 @@ export default function RutasPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            size="icon" variant="ghost"
+                            title="Editar viaje"
+                            onClick={() => openEdit(v)}
+                            disabled={v.estado !== "programado"}
+                          >
+                            <Pencil size={15} />
+                          </Button>
                           <Button
                             size="icon" variant="ghost"
                             className="text-destructive hover:text-destructive"
@@ -284,10 +325,10 @@ export default function RutasPage() {
       )}
 
       {/* Modal programar viaje */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+      <Dialog open={modalOpen} onOpenChange={(o) => { setModalOpen(o); if (!o) setEditingViaje(null); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Programar nuevo viaje</DialogTitle>
+            <DialogTitle>{editingViaje ? "Editar viaje" : "Programar nuevo viaje"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
 
@@ -360,9 +401,9 @@ export default function RutasPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => { setModalOpen(false); setEditingViaje(null); }}>Cancelar</Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Guardando..." : "Programar viaje"}
+              {saving ? "Guardando..." : editingViaje ? "Guardar cambios" : "Programar viaje"}
             </Button>
           </DialogFooter>
         </DialogContent>

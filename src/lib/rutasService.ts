@@ -148,6 +148,14 @@ export const viajesService = {
     if (error) throw error;
   },
 
+  async update(id: number, viaje: Partial<ViajeInsert>): Promise<void> {
+    const { error } = await supabase
+      .from("viajes")
+      .update(viaje)
+      .eq("id", id);
+    if (error) throw error;
+  },
+
   async delete(id: number): Promise<void> {
     const { error } = await supabase.from("viajes").delete().eq("id", id);
     if (error) throw error;
