@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Sun, Moon, Globe, Bell, User, ChevronRight, KeyRound, Building2, Upload, X, Loader2 } from "lucide-react";
+import { Sun, Moon, Globe, User, ChevronRight, KeyRound, Building2, Upload, X, Loader2 } from "lucide-react";
 
 function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
@@ -176,18 +176,9 @@ export default function ConfiguracionPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const [notifications, setNotifications] = useState(
-    () => localStorage.getItem("notifications") !== "false"
-  );
   const [sendingReset, setSendingReset] = useState(false);
 
   if (!user) return <Navigate to="/auth" replace />;
-
-  const handleToggleNotifications = () => {
-    const next = !notifications;
-    setNotifications(next);
-    localStorage.setItem("notifications", String(next));
-  };
 
   const handlePasswordReset = async () => {
     try {
@@ -261,20 +252,7 @@ export default function ConfiguracionPage() {
         </div>
       </Card>
 
-      {/* Notificaciones */}
-      <Card className="p-6 space-y-4">
-        <div className="flex items-center gap-2 mb-1">
-          <Bell size={16} />
-          <h2 className="font-semibold">{t("config_notifications")}</h2>
-        </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium">{t("config_notifications")}</p>
-            <p className="text-xs text-muted-foreground">{t("config_notif_desc")}</p>
-          </div>
-          <Toggle on={notifications} onToggle={handleToggleNotifications} />
-        </div>
-      </Card>
+
 
       {/* Perfil */}
       <Card className="p-6 space-y-4">
