@@ -23,6 +23,36 @@ export type BusUpdate = Partial<BusInsert>;
 
 export const COOPERATIVA_ID = 3;
 
+// Catálogo de marcas para seleccionar en combo box y evitar errores de tipeo.
+export const MARCAS_CHASIS = [
+  "Mercedes-Benz",
+  "Volvo",
+  "Scania",
+  "Hino",
+  "Chevrolet",
+  "Volkswagen",
+  "MAN",
+  "International",
+  "Agrale",
+  "Hyundai",
+  "JAC",
+] as const;
+
+export const MARCAS_CARROCERIA = [
+  "Marcopolo",
+  "Busscar",
+  "Miral",
+  "IMCE",
+  "Olímpica",
+  "Patricio Cepeda",
+  "Carrocerías Jácome",
+  "Davmotor",
+  "Picosa",
+  "Serman",
+  "Varma",
+  "Imperial",
+] as const;
+
 export const busService = {
   async getAll(): Promise<Bus[]> {
     const { data, error } = await supabase
@@ -34,7 +64,7 @@ export const busService = {
     return data as Bus[];
   },
 
-  async create(bus: Omit<BusInsert, "cooperativa_id" | "numero">): Promise<Bus> {
+  async create(bus: Omit<BusInsert, "cooperativa_id">): Promise<Bus> {
     const { data, error } = await supabase
       .from("buses")
       .insert({ ...bus, cooperativa_id: COOPERATIVA_ID })
