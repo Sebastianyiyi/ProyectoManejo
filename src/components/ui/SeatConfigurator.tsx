@@ -80,9 +80,11 @@ function recalcularAsientos(cfg: SeatConfiguratorValue): AsientoConfig[] {
 function FloorPlan({
   piso,
   asientos,
+  showChofer = true,
 }: {
   piso: 1 | 2;
   asientos: AsientoConfig[];
+  showChofer?: boolean;
 }) {
   if (asientos.length === 0) {
     return (
@@ -108,12 +110,14 @@ function FloorPlan({
 
         {/* Cuerpo del bus */}
         <div className="rounded-2xl border-2 border-border bg-card px-5 pt-4 pb-5 shadow-sm">
-          {/* Chofer */}
-          <div className="flex justify-end mb-4">
-            <div className="flex items-center gap-1.5 rounded-xl border border-dashed border-muted-foreground/30 px-3 py-1.5 text-[11px] text-muted-foreground">
-              🧑‍✈️ Chofer
+          {/* Chofer — solo en piso 1 */}
+          {showChofer && (
+            <div className="flex justify-end mb-4">
+              <div className="flex items-center gap-1.5 rounded-xl border border-dashed border-muted-foreground/30 px-3 py-1.5 text-[11px] text-muted-foreground">
+                🧑‍✈️ Chofer
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Grid de asientos */}
           <div className="space-y-2">
@@ -186,6 +190,7 @@ export function SeatConfigurator({ value, onChange }: Props) {
     const newVal: SeatConfiguratorValue = {
       ...value,
       doble_piso: esDoble,
+      asientos_piso2: esDoble ? (value.asientos_piso2 >= 30 ? value.asientos_piso2 : 30) : 0,
     };
     newVal.asientos = recalcularAsientos(newVal);
     onChange(newVal);
@@ -193,7 +198,7 @@ export function SeatConfigurator({ value, onChange }: Props) {
 
   const handleCantidadPiso = useCallback(
     (piso: 1 | 2, cantidad: number) => {
-      const safe = Math.max(1, Math.min(60, isNaN(cantidad) ? 1 : cantidad));
+      const safe = Math.max(30, Math.min(40, isNaN(cantidad) ? 1 : cantidad));
       const newVal: SeatConfiguratorValue = {
         ...value,
         asientos_piso1: piso === 1 ? safe : value.asientos_piso1,
@@ -274,8 +279,8 @@ export function SeatConfigurator({ value, onChange }: Props) {
           <div className="flex items-center gap-2">
             <Input
               type="number"
-              min={1}
-              max={60}
+              min={30}
+              max={40}
               value={value.asientos_piso1}
               onChange={(e) => handleCantidadPiso(1, parseInt(e.target.value))}
               className="w-24 text-center font-mono text-base"
@@ -295,8 +300,8 @@ export function SeatConfigurator({ value, onChange }: Props) {
             <div className="flex items-center gap-2">
               <Input
                 type="number"
-                min={1}
-                max={60}
+                min={30}
+                max={40}
                 value={value.asientos_piso2}
                 onChange={(e) => handleCantidadPiso(2, parseInt(e.target.value))}
                 className="w-24 text-center font-mono text-base"
@@ -331,7 +336,7 @@ export function SeatConfigurator({ value, onChange }: Props) {
             <FloorPlan piso={1} asientos={asientosPiso1} />
           </TabsContent>
           <TabsContent value="piso2" className="mt-3">
-            <FloorPlan piso={2} asientos={asientosPiso2} />
+            <FloorPlan piso={2} asientos={asientosPiso2} showChofer={false} />
           </TabsContent>
         </Tabs>
       ) : (
