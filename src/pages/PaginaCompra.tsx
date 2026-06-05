@@ -296,7 +296,7 @@ const labelDescuento: Record<TipoDescuento, string> = {
         {/* Leyenda */}
         <div className="flex gap-6 text-sm flex-wrap">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-muted border" />
+            <div className="w-6 h-6 rounded bg-green-100 border border-green-400" />
             <span className="text-muted-foreground">{t("compra_available")}</span>
           </div>
           <div className="flex items-center gap-2">
@@ -304,7 +304,7 @@ const labelDescuento: Record<TipoDescuento, string> = {
             <span className="text-muted-foreground">{t("compra_selected")}</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-gray-400" />
+            <div className="w-6 h-6 rounded bg-red-200 border border-red-400" />
             <span className="text-muted-foreground">{t("compra_occupied")}</span>
           </div>
         </div>
@@ -382,12 +382,12 @@ const labelDescuento: Record<TipoDescuento, string> = {
                               flex items-center justify-center
                               border-2
                               ${ocupado
-                                ? "bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed"
+                                ? "bg-red-200 border-red-400 text-red-500 cursor-not-allowed"
                                 : seleccionado
                                   ? "bg-blue-500 border-blue-600 text-white scale-105 shadow-md"
                                   : esEjecutivo
                                     ? "bg-yellow-50 border-yellow-400 text-yellow-700 hover:bg-yellow-100"
-                                    : "bg-muted border-border text-foreground hover:bg-accent hover:scale-105"
+                                    : "bg-green-100 border-green-400 text-green-700 hover:bg-green-200 hover:scale-105"
                               }
                             `}
                           >
