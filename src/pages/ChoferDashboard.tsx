@@ -592,7 +592,9 @@ export default function ChoferDashboard() {
   const [registrandoVenta, setRegistrandoVenta] = useState(false);
   const [ventaExitosa, setVentaExitosa] = useState<VentaExitosa | null>(null);
 
-  const viajesEnCurso = viajes.filter((viaje) => viaje.estado === "en_curso");
+  const viajesAsignadosActivos = viajes.filter((viaje) =>
+    ["programado", "en_curso"].includes(viaje.estado)
+  );
 
   const viajesCompletados = viajes.filter((viaje) => viaje.estado === "completado");
 
@@ -1563,7 +1565,7 @@ export default function ChoferDashboard() {
 
                 <div>
                   <p className="text-sm text-muted-foreground">{t("chofer_stat_assigned")}</p>
-                  <p className="text-2xl font-bold">{viajesEnCurso.length}</p>
+                  <p className="text-2xl font-bold">{viajesAsignadosActivos.length}</p>
                 </div>
               </div>
             </Card>
@@ -1607,13 +1609,13 @@ export default function ChoferDashboard() {
                 <Loader2 className="h-5 w-5 animate-spin" />
                 <span>{t("chofer_trips_loading")}</span>
               </Card>
-            ) : viajesEnCurso.length === 0 ? (
+            ) : viajesAsignadosActivos.length === 0 ? (
               <Card className="p-6 text-muted-foreground">
                 {t("chofer_trips_empty")}
               </Card>
             ) : (
               <div className="grid gap-4">
-                {viajesEnCurso.map((viaje) => (
+                {viajesAsignadosActivos.map((viaje) => (
                   <Card key={viaje.id} className="p-5">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                       <div className="space-y-2">
