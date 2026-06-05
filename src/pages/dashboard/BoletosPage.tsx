@@ -56,7 +56,7 @@ export default function BoletosPage() {
                 cooperativa_id,
                 placa
               ),
-              frecuencias (
+              rutas (
                 ciudad_origen,
                 ciudad_destino
               )
@@ -107,8 +107,8 @@ export default function BoletosPage() {
     
     const searchLower = search.toLowerCase();
     const cliente = `${r.perfiles?.nombre ?? ""} ${r.perfiles?.apellidos ?? ""}`.toLowerCase();
-    const origen = r.viajes?.frecuencias?.ciudad_origen?.toLowerCase() ?? "";
-    const destino = r.viajes?.frecuencias?.ciudad_destino?.toLowerCase() ?? "";
+    const origen = r.viajes?.rutas?.ciudad_origen?.toLowerCase() ?? "";
+    const destino = r.viajes?.rutas?.ciudad_destino?.toLowerCase() ?? "";
     const boletoId = String(r.id);
 
     return (
@@ -187,7 +187,7 @@ export default function BoletosPage() {
                 {filtered.map((r, i) => {
                   const est = ESTADO_LABEL[r.estado] ?? { text: r.estado, variant: "outline" };
                   const v = r.viajes;
-                  const f = v?.frecuencias;
+                  const f = v?.rutas;
                   const fechaEmision = new Date(r.created_at);
                   const clienteNombre = `${r.perfiles?.nombre ?? ""} ${r.perfiles?.apellidos ?? ""}`.trim() || "Usuario anónimo";
 
@@ -247,7 +247,7 @@ export default function BoletosPage() {
                 <span className="text-muted-foreground">Total a pagar:</span>
                 <span className="font-bold text-primary">${Number(validatingBoleto?.precio_total).toFixed(2)}</span>
                 <span className="text-muted-foreground">Ruta:</span>
-                <span>{validatingBoleto?.viajes?.frecuencias?.ciudad_origen} → {validatingBoleto?.viajes?.frecuencias?.ciudad_destino}</span>
+                <span>{validatingBoleto?.viajes?.rutas?.ciudad_origen} → {validatingBoleto?.viajes?.rutas?.ciudad_destino}</span>
                 <span className="text-muted-foreground">Fecha del viaje:</span>
                 <span>{validatingBoleto?.viajes?.fecha_salida ? format(new Date(validatingBoleto.viajes.fecha_salida), "dd MMM yyyy, HH:mm", { locale: es }) : "—"}</span>
               </div>
