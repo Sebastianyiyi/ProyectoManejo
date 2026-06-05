@@ -18,14 +18,14 @@ import {
 // ─── Paleta predefinida ───────────────────────────────────────────────────────
 
 const PALETTE: { label: string; primary: string; secondary: string }[] = [
-  { label: "Azul",     primary: "#2563eb", secondary: "#64748b" },
-  { label: "Verde",    primary: "#16a34a", secondary: "#64748b" },
-  { label: "Violeta",  primary: "#7c3aed", secondary: "#64748b" },
-  { label: "Rojo",     primary: "#dc2626", secondary: "#64748b" },
-  { label: "Naranja",  primary: "#ea580c", secondary: "#64748b" },
-  { label: "Teal",     primary: "#0d9488", secondary: "#64748b" },
-  { label: "Rosa",     primary: "#db2777", secondary: "#64748b" },
-  { label: "Índigo",   primary: "#4f46e5", secondary: "#64748b" },
+  { label: "Azul",    primary: "#2563eb", secondary: "#64748b" },
+  { label: "Verde",   primary: "#16a34a", secondary: "#64748b" },
+  { label: "Violeta", primary: "#7c3aed", secondary: "#64748b" },
+  { label: "Rojo",    primary: "#dc2626", secondary: "#64748b" },
+  { label: "Naranja", primary: "#ea580c", secondary: "#64748b" },
+  { label: "Teal",    primary: "#0d9488", secondary: "#64748b" },
+  { label: "Rosa",    primary: "#db2777", secondary: "#64748b" },
+  { label: "Índigo",  primary: "#4f46e5", secondary: "#64748b" },
 ];
 
 // ─── Tipos locales ────────────────────────────────────────────────────────────
@@ -94,14 +94,12 @@ export default function CooperativaPerfilPage() {
   const [proximos, setProximos]       = useState<ViajeProximo[]>([]);
   const [loading, setLoading]         = useState(true);
 
-  // Estado de edición de perfil
-  const [editMode, setEditMode]   = useState(false);
-  const [saving, setSaving]       = useState(false);
-  const [form, setForm]           = useState<EditForm>({
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving]     = useState(false);
+  const [form, setForm]         = useState<EditForm>({
     nombre: "", telefono: "", direccion: "", logo_url: "",
   });
 
-  // Estado de edición de colores
   const [draftColors, setDraftColors] = useState<ThemeColors>(colors);
 
   // ── Carga inicial ──────────────────────────────────────────────────────────
@@ -157,7 +155,6 @@ export default function CooperativaPerfilPage() {
     load();
   }, [toast]);
 
-  // Sincronizar draft cuando cambian colores externos (ej: otro tab)
   useEffect(() => { setDraftColors(colors); }, [colors]);
 
   // ── Guardar perfil ─────────────────────────────────────────────────────────
@@ -202,7 +199,6 @@ export default function CooperativaPerfilPage() {
   async function handleSaveColors() {
     try {
       await setColors(draftColors);
-      // Actualizar estado local de cooperativa para reflejar los colores guardados
       setCooperativa((prev) =>
         prev
           ? { ...prev, color_primario: draftColors.primary, color_secundario: draftColors.secondary }
@@ -214,7 +210,7 @@ export default function CooperativaPerfilPage() {
     }
   }
 
-  // ── Renders ────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   if (loading) return <div className="p-6 text-muted-foreground text-sm">{t("coop_loading")}</div>;
 
@@ -223,8 +219,8 @@ export default function CooperativaPerfilPage() {
   );
 
   const estadoLabelKey =
-    cooperativa.estado === "verificada"  ? "coop_estado_verificada"  :
-    cooperativa.estado === "suspendida"  ? "coop_estado_suspendida"  :
+    cooperativa.estado === "verificada" ? "coop_estado_verificada" :
+    cooperativa.estado === "suspendida" ? "coop_estado_suspendida" :
     "coop_estado_pendiente";
 
   const badgeClass = estadoBadgeClass[cooperativa.estado] ?? estadoBadgeClass.pendiente;
@@ -232,15 +228,11 @@ export default function CooperativaPerfilPage() {
   return (
     <div className="p-6 space-y-6">
 
-      {/* ── Header cooperativa ── */}
+      {/* ── Header ── */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
           {cooperativa.logo_url ? (
-            <img
-              src={cooperativa.logo_url}
-              alt="logo"
-              className="h-14 w-14 rounded-lg object-contain border"
-            />
+            <img src={cooperativa.logo_url} alt="logo" className="h-14 w-14 rounded-lg object-contain border" />
           ) : (
             <div className="h-14 w-14 rounded-lg bg-primary/10 grid place-items-center">
               <Bus size={24} className="text-primary" />
@@ -281,7 +273,6 @@ export default function CooperativaPerfilPage() {
       {editMode && (
         <Card className="p-5 space-y-4">
           <h2 className="text-sm font-semibold">Editar información de la cooperativa</h2>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label htmlFor="nombre">Nombre *</Label>
@@ -292,7 +283,6 @@ export default function CooperativaPerfilPage() {
                 placeholder="Nombre de la cooperativa"
               />
             </div>
-
             <div className="space-y-1">
               <Label htmlFor="telefono">Teléfono</Label>
               <Input
@@ -302,7 +292,6 @@ export default function CooperativaPerfilPage() {
                 placeholder="+593 99 999 9999"
               />
             </div>
-
             <div className="space-y-1 md:col-span-2">
               <Label htmlFor="direccion">Dirección</Label>
               <Input
@@ -312,7 +301,6 @@ export default function CooperativaPerfilPage() {
                 placeholder="Av. Principal 123, Ciudad"
               />
             </div>
-
             <div className="space-y-1 md:col-span-2">
               <Label htmlFor="logo_url">URL del logo</Label>
               <Input
@@ -323,7 +311,6 @@ export default function CooperativaPerfilPage() {
               />
             </div>
           </div>
-
           <div className="flex gap-2 justify-end">
             <Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={saving}>
               <X size={14} className="mr-1" /> Cancelar
@@ -339,19 +326,18 @@ export default function CooperativaPerfilPage() {
       {/* ── Estadísticas ── */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          <StatCard icon={Bus}          label={t("coop_stat_buses")}    value={stats.buses}              color="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" />
-          <StatCard icon={Map}          label={t("coop_stat_rutas")}    value={stats.rutas}              color="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400" />
-          <StatCard icon={CalendarClock} label={t("coop_stat_viajes")}  value={stats.viajesProgramados}  color="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400" />
-          <StatCard icon={Clock}        label={t("coop_stat_reservas")} value={stats.reservasPendientes} color="bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" />
-          <StatCard icon={Ticket}       label={t("coop_stat_boletos")}  value={stats.boletosEmitidos}    color="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" />
+          <StatCard icon={Bus}           label={t("coop_stat_buses")}    value={stats.buses}              color="bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" />
+          <StatCard icon={Map}           label={t("coop_stat_rutas")}    value={stats.rutas}              color="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400" />
+          <StatCard icon={CalendarClock} label={t("coop_stat_viajes")}   value={stats.viajesProgramados}  color="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400" />
+          <StatCard icon={Clock}         label={t("coop_stat_reservas")} value={stats.reservasPendientes} color="bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" />
+          <StatCard icon={Ticket}        label={t("coop_stat_boletos")}  value={stats.boletosEmitidos}    color="bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400" />
         </div>
       )}
 
-      {/* ── Selector de tema de colores ── */}
+      {/* ── Tema de colores ── */}
       <Card className="p-5 space-y-4">
         <h2 className="text-sm font-semibold">Tema de colores</h2>
 
-        {/* Paleta predefinida */}
         <div>
           <p className="text-xs text-muted-foreground mb-2">Paleta rápida</p>
           <div className="flex flex-wrap gap-2">
@@ -372,7 +358,6 @@ export default function CooperativaPerfilPage() {
           </div>
         </div>
 
-        {/* Color picker manual */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
             <Label htmlFor="color-primary">Color primario</Label>
@@ -393,7 +378,6 @@ export default function CooperativaPerfilPage() {
               />
             </div>
           </div>
-
           <div className="space-y-1">
             <Label htmlFor="color-secondary">Color secundario</Label>
             <div className="flex items-center gap-2">
@@ -415,7 +399,6 @@ export default function CooperativaPerfilPage() {
           </div>
         </div>
 
-        {/* Vista previa */}
         <div>
           <p className="text-xs text-muted-foreground mb-2">Vista previa</p>
           <div className="flex items-center gap-3">
@@ -431,23 +414,11 @@ export default function CooperativaPerfilPage() {
             >
               Botón secundario
             </div>
-            <div
-              className="h-5 w-5 rounded-full border"
-              style={{ background: draftColors.primary }}
-            />
-            <div
-              className="h-5 w-5 rounded-full border"
-              style={{ background: draftColors.secondary }}
-            />
           </div>
         </div>
 
         <div className="flex justify-end">
-          <Button
-            size="sm"
-            onClick={handleSaveColors}
-            disabled={savingColors}
-          >
+          <Button size="sm" onClick={handleSaveColors} disabled={savingColors}>
             <Save size={14} className="mr-1" />
             {savingColors ? "Guardando..." : "Guardar tema"}
           </Button>
