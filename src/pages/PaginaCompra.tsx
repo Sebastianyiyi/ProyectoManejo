@@ -606,7 +606,7 @@ const labelDescuento: Record<TipoDescuento, string> = {
         )}
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex gap-3 no-print">
         <button
           onClick={() => window.print()}
           className="flex-1 border border-border rounded-xl py-3 text-sm font-medium
