@@ -64,6 +64,9 @@ export default function BoletosPage() {
             usuarios (
               full_name,
               email
+            ),
+            pagos (
+              comprobante_url
             )
           `)
           .order("created_at", { ascending: false });
@@ -254,17 +257,24 @@ export default function BoletosPage() {
 
             <div className="space-y-2">
               <h3 className="font-medium text-sm">Verificación de Comprobante / Factura</h3>
-              {validatingBoleto?.comprobante_url ? (
-                <div className="border rounded-md p-2 bg-muted/10 text-center">
-                  <a href={validatingBoleto.comprobante_url} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-sm flex justify-center items-center gap-1">
-                    <FileText className="h-4 w-4" /> Ver comprobante subido
-                  </a>
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground p-3 border rounded-md bg-muted/10">
-                  El usuario no ha subido comprobante digital o pagó en efectivo. Verifique el pago en el sistema bancario o físicamente antes de confirmar.
-                </p>
-              )}
+              {(() => {
+                const comprobanteUrl = validatingBoleto?.pagos
+                  ? (Array.isArray(validatingBoleto.pagos)
+                      ? validatingBoleto.pagos[0]?.comprobante_url
+                      : validatingBoleto.pagos.comprobante_url)
+                  : null;
+                return comprobanteUrl ? (
+                  <div className="border rounded-md p-2 bg-muted/10 text-center">
+                    <a href={comprobanteUrl} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-sm flex justify-center items-center gap-1">
+                      <FileText className="h-4 w-4" /> Ver comprobante subido
+                    </a>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground p-3 border rounded-md bg-muted/10">
+                    El usuario no ha subido comprobante digital o pagó en efectivo. Verifique el pago en el sistema bancario o físicamente antes de confirmar.
+                  </p>
+                );
+              })()}
             </div>
             
             <p className="text-xs text-muted-foreground text-center mt-2">
