@@ -41,11 +41,17 @@ export interface ViajeConFrecuencia {
     tipo: string;
     numero: string | null;
   };
+  chofer?: {
+    id: number;
+    full_name: string;
+    email: string;
+  } | null;
 }
 
 export interface ViajeInsert {
   frecuencia_id: number;
   bus_id: number;
+  chofer_id?: number | null;
   fecha_salida: string;
   fecha_llegada_est?: string | null;
   precio_base: number;
@@ -124,6 +130,11 @@ export const viajesService = {
           placa,
           tipo,
           numero
+        ),
+        usuarios (
+          id,
+          full_name,
+          email
         )
       `)
       .eq("buses.cooperativa_id", coopId)
@@ -133,6 +144,7 @@ export const viajesService = {
       ...item,
       frecuencias: Array.isArray(item.frecuencias) ? item.frecuencias[0] : item.frecuencias,
       buses: Array.isArray(item.buses) ? item.buses[0] : item.buses,
+      chofer: Array.isArray(item.usuarios) ? item.usuarios[0] : (item.usuarios ?? null),
     }));
     return mapped as ViajeConFrecuencia[];
   },
@@ -144,6 +156,7 @@ export const viajesService = {
       .insert({
         frecuencia_id: viaje.frecuencia_id,
         bus_id: viaje.bus_id,
+        chofer_id: viaje.chofer_id ?? null,
         fecha_salida: viaje.fecha_salida,
         fecha_llegada_est: viaje.fecha_llegada_est ?? null,
         precio_base: viaje.precio_base,
