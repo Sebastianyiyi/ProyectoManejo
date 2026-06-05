@@ -17,6 +17,7 @@ import PerfilPage from "./pages/PerfilPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import MisReservas from "./pages/MisReservas";
 import Boleto from "./pages/Boleto";
+import ProtectedRoute from "@/components/ui/ProtectedRoute";
 
 import { Layout } from "./components/ui/Layout";
 import DashboardLayout from "./pages/dashboard/DashboardLayout";
@@ -82,7 +83,14 @@ const App = () => (
 
                 <Route path="/dashboard" element={<DashboardLayout />}>
                   <Route index element={<DashboardHome />} />
-                  <Route path="cooperativa" element={<CooperativaPerfilPage />} />
+                  <Route
+                      path="cooperativa"
+                      element={
+                        <ProtectedRoute allowedRoles={["administrador"]}>
+                          <CooperativaPerfilPage />
+                        </ProtectedRoute>
+                      }
+                    />
                   <Route path="buses" element={<BusesPage />} />
                   <Route path="rutas" element={<RutasPage />} />
                 </Route>
