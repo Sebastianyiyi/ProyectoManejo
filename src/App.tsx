@@ -27,6 +27,7 @@ import BusesPage from "./pages/dashboard/BusesPage";
 import CooperativaPerfilPage from "./pages/dashboard/CooperativaPerfilPage";
 import RutasPage from "./pages/dashboard/RutasPage";
 import FrecuenciasPage from "./pages/dashboard/FrecuenciasPage";
+import BoletosPage from "./pages/dashboard/BoletosPage";
 import UsuariosPage from "./pages/dashboard/UsuariosPage";
 
 const PaginaCompra = lazy(() => import("./pages/PaginaCompra"));
@@ -92,7 +93,14 @@ const App = () => (
                     <Route path="buses" element={<BusesPage />} />
                     <Route path="rutas" element={<RutasPage />} />
                     <Route path="frecuencias" element={<FrecuenciasPage />} />
-
+                    <Route
+                      path="boletos"
+                      element={
+                        <ProtectedRoute allowedRoles={["administrador", "oficinista"]}>
+                          <BoletosPage />
+                        </ProtectedRoute>
+                      }
+                    />
                     <Route
                       path="usuarios"
                       element={
@@ -101,7 +109,7 @@ const App = () => (
                        </ProtectedRoute>
                       }
                     />
-                    </Route>
+                  </Route>
                 </Routes>
               </BrowserRouter>
             </TooltipProvider>

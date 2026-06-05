@@ -40,8 +40,13 @@ export default function Index() {
     const origenesUnicos = Array.from(new Set(rutas.map(r => r.ciudad_origen))).sort();
     const destinosUnicos = Array.from(new Set(rutas.map(r => r.ciudad_destino))).sort();
 
-    if (!loading && user && (user.role === "administrador" || user.role === "oficinista")) {
-        return <Navigate to="/dashboard" replace />;
+    if (!loading && user) {
+        if (user.role === "administrador" || user.role === "oficinista") {
+            return <Navigate to="/dashboard" replace />;
+        }
+        if (user.role === "chofer") {
+            return <Navigate to="/chofer" replace />;
+        }
     }
 
     const handleSearch = (e: React.FormEvent) => {

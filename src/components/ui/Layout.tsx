@@ -43,6 +43,11 @@ export function Layout() {
           `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-foreground/70 hover:text-foreground'}`
         }>{t("nav_dashboard")}</NavLink>
       )}
+      {isChofer && (
+        <NavLink to="/chofer" className={({ isActive }) =>
+          `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-foreground/70 hover:text-foreground'}`
+        }>Panel de Chofer</NavLink>
+      )}
     </>
   );
 
@@ -74,6 +79,14 @@ export function Layout() {
                     <>
                       <DropdownMenuItem onClick={() => navigate('/dashboard')}>
                         <LayoutDashboard className="mr-2 h-4 w-4" /> {t("nav_dashboard")}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  {isChofer && (
+                    <>
+                      <DropdownMenuItem onClick={() => navigate('/chofer')}>
+                        <LayoutDashboard className="mr-2 h-4 w-4" /> Panel de Chofer
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                     </>
