@@ -129,8 +129,12 @@ export const viajesService = {
       .eq("buses.cooperativa_id", coopId)
       .order("fecha_salida", { ascending: false });
 
-    if (error) throw error;
-    return (data ?? []) as ViajeConFrecuencia[];
+    const mapped = (data ?? []).map((item: any) => ({
+      ...item,
+      frecuencias: Array.isArray(item.frecuencias) ? item.frecuencias[0] : item.frecuencias,
+      buses: Array.isArray(item.buses) ? item.buses[0] : item.buses,
+    }));
+    return mapped as ViajeConFrecuencia[];
   },
 
   /** Crear un viaje a partir de frecuencia + bus + fecha + costo */
