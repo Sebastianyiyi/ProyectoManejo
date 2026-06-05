@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { frecuenciasService, subirResolucion } from "@/lib/frecuenciasService";
 import type { Frecuencia } from "@/lib/frecuenciasService";
+import { rutasService } from "@/lib/rutasService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -48,6 +52,16 @@ export default function FrecuenciasPage() {
   const [uploading, setUploading] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
+  // Estados para el selector de ciudades
+  const [ciudades, setCiudades] = useState<string[]>([]);
+  const [customCities, setCustomCities] = useState<string[]>(() => {
+    const stored = typeof window !== "undefined" ? localStorage.getItem("custom_ciudades") : null;
+    return stored ? JSON.parse(stored) : [];
+  });
+  const [newCityModalOpen, setNewCityModalOpen] = useState(false);
+  const [newCityTarget, setNewCityTarget] = useState<"origen" | "destino" | null>(null);
+  const [newCityName, setNewCityName] = useState("");
+
   const fetchFrecuencias = useCallback(async () => {
     try {
       setLoading(true);
@@ -59,7 +73,56 @@ export default function FrecuenciasPage() {
     }
   }, [toast]);
 
-  useEffect(() => { fetchFrecuencias(); }, [fetchFrecuencias]);
+  const fetchCiudades = useCallback(async () => {
+    try {
+      const routes = await rutasService.getAll();
+      const dbCities = routes.flatMap((r) => [r.ciudad_origen, r.ciudad_destino]).filter(Boolean);
+      const stored = localStorage.getItem("custom_ciudades");
+      const localCities = stored ? JSON.parse(stored) : [];
+      const allUnique = Array.from(new Set([...dbCities, ...localCities])).sort();
+      setCiudades(allUnique);
+    } catch (err) {
+      console.error("Error al cargar ciudades:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchFrecuencias();
+    fetchCiudades();
+  }, [fetchFrecuencias, fetchCiudades]);
+
+  const openAddCityModal = (target: "origen" | "destino") => {
+    setNewCityTarget(target);
+    setNewCityName("");
+    setNewCityModalOpen(true);
+  };
+
+  const handleAddCity = () => {
+    const trimmed = newCityName.trim();
+    if (!trimmed) {
+      toast({ title: "El nombre de la ciudad no puede estar vacío", variant: "destructive" });
+      return;
+    }
+
+    if (ciudades.some((c) => c.toLowerCase() === trimmed.toLowerCase())) {
+      toast({ title: "La ciudad ya existe", variant: "destructive" });
+      return;
+    }
+
+    const updatedCustom = [...customCities, trimmed];
+    setCustomCities(updatedCustom);
+    localStorage.setItem("custom_ciudades", JSON.stringify(updatedCustom));
+    setCiudades((prev) => [...prev, trimmed].sort());
+
+    if (newCityTarget === "origen") {
+      setForm((prev) => ({ ...prev, ciudad_origen: trimmed }));
+    } else if (newCityTarget === "destino") {
+      setForm((prev) => ({ ...prev, ciudad_destino: trimmed }));
+    }
+
+    setNewCityModalOpen(false);
+    toast({ title: "Ciudad agregada correctamente" });
+  };
 
   const filtered = frecuencias.filter((f) =>
     [f.ciudad_origen, f.ciudad_destino]
@@ -274,19 +337,63 @@ export default function FrecuenciasPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Ciudad de origen *</Label>
-                <Input
-                  placeholder="Ej: Quito"
-                  value={form.ciudad_origen}
-                  onChange={(e) => setForm({ ...form, ciudad_origen: e.target.value })}
-                />
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Select
+                      value={form.ciudad_origen}
+                      onValueChange={(v) => setForm({ ...form, ciudad_origen: v })}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Seleccione origen" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ciudades.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => openAddCityModal("origen")}
+                    className="shrink-0"
+                    title="Agregar nueva ciudad"
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Ciudad de destino *</Label>
-                <Input
-                  placeholder="Ej: Ibarra"
-                  value={form.ciudad_destino}
-                  onChange={(e) => setForm({ ...form, ciudad_destino: e.target.value })}
-                />
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Select
+                      value={form.ciudad_destino}
+                      onValueChange={(v) => setForm({ ...form, ciudad_destino: v })}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Seleccione destino" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ciudades.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => openAddCityModal("destino")}
+                    className="shrink-0"
+                    title="Agregar nueva ciudad"
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -363,6 +470,40 @@ export default function FrecuenciasPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog para agregar una nueva ciudad */}
+      <Dialog open={newCityModalOpen} onOpenChange={setNewCityModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Agregar nueva ciudad</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-city-name-input">Nombre de la ciudad</Label>
+              <Input
+                id="new-city-name-input"
+                placeholder="Ej: Ambato"
+                value={newCityName}
+                onChange={(e) => setNewCityName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleAddCity();
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewCityModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleAddCity}>
+              Agregar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
