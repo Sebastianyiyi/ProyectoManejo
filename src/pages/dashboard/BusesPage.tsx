@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
-import { busService } from "@/lib/busService";
+import { busService, MARCAS_CHASIS, MARCAS_CARROCERIA } from "@/lib/busService";
 import type { Bus, BusInsert, TipoBus } from "@/lib/busService";
+import { validarPlacaEcuador } from "@/lib/placa";
 import { useLang } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,8 +21,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, Pencil, Trash2, Power, Image as ImageIcon } from "lucide-react";
 
-const EMPTY_FORM: Omit<BusInsert, "cooperativa_id" | "numero"> = {
+const EMPTY_FORM: Omit<BusInsert, "cooperativa_id"> = {
   placa: "",
+  numero: "",
   capacidad: 40,
   tipo: "economico",
   marca_chasis: "",
@@ -48,8 +50,8 @@ export default function BusesPage() {
 
   const fetchBuses = useCallback(async () => {
     try {
-      setLoading(true);
-      setBuses(await busService.getAll());
+      const data = await busService.getAll();
+      setBuses(data);
     } catch {
       toast({ title: t("buses_error_load"), variant: "destructive" });
     } finally {
@@ -74,6 +76,7 @@ export default function BusesPage() {
     setEditingBus(bus);
     setForm({
       placa: bus.placa,
+      numero: bus.numero ?? "",
       capacidad: bus.capacidad,
       tipo: bus.tipo,
       marca_chasis: bus.marca_chasis ?? "",
@@ -89,13 +92,19 @@ export default function BusesPage() {
       toast({ title: t("buses_plate_required"), variant: "destructive" });
       return;
     }
+    if (!validarPlacaEcuador(form.placa)) {
+      toast({ title: t("buses_plate_invalid"), variant: "destructive" });
+      return;
+    }
+    // Normaliza el número de flota: vacío se guarda como null.
+    const payload = { ...form, numero: form.numero?.trim() || null };
     try {
       setSaving(true);
       if (editingBus) {
-        await busService.update(editingBus.id, form);
+        await busService.update(editingBus.id, payload);
         toast({ title: t("buses_updated") });
       } else {
-        await busService.create(form);
+        await busService.create(payload);
         toast({ title: t("buses_created") });
       }
       setModalOpen(false);
@@ -270,6 +279,12 @@ export default function BusesPage() {
                 onChange={(e) => setForm({ ...form, placa: e.target.value.toUpperCase() })} />
             </div>
             <div className="space-y-1">
+              <Label>{t("buses_label_number")}</Label>
+              <Input placeholder={t("buses_number_placeholder")}
+                value={form.numero ?? ""}
+                onChange={(e) => setForm({ ...form, numero: e.target.value })} />
+            </div>
+            <div className="space-y-1">
               <Label>{t("buses_label_type")}</Label>
               <Select value={form.tipo} onValueChange={(v) => setForm({ ...form, tipo: v as TipoBus })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -289,15 +304,31 @@ export default function BusesPage() {
             </div>
             <div className="space-y-1">
               <Label>{t("buses_label_chassis")}</Label>
-              <Input placeholder="Ej: Volvo, Mercedes"
+              <Select
                 value={form.marca_chasis ?? ""}
-                onChange={(e) => setForm({ ...form, marca_chasis: e.target.value })} />
+                onValueChange={(v) => setForm({ ...form, marca_chasis: v })}
+              >
+                <SelectTrigger><SelectValue placeholder={t("buses_select_brand")} /></SelectTrigger>
+                <SelectContent>
+                  {MARCAS_CHASIS.map((marca) => (
+                    <SelectItem key={marca} value={marca}>{marca}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
               <Label>{t("buses_label_body")}</Label>
-              <Input placeholder="Ej: Busscar, Marcopolo"
+              <Select
                 value={form.marca_carroceria ?? ""}
-                onChange={(e) => setForm({ ...form, marca_carroceria: e.target.value })} />
+                onValueChange={(v) => setForm({ ...form, marca_carroceria: v })}
+              >
+                <SelectTrigger><SelectValue placeholder={t("buses_select_brand")} /></SelectTrigger>
+                <SelectContent>
+                  {MARCAS_CARROCERIA.map((marca) => (
+                    <SelectItem key={marca} value={marca}>{marca}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="col-span-2 space-y-1">
               <Label>{t("buses_label_photo")}</Label>
