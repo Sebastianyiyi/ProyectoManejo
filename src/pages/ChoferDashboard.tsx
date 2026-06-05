@@ -1607,13 +1607,13 @@ export default function ChoferDashboard() {
                 <Loader2 className="h-5 w-5 animate-spin" />
                 <span>{t("chofer_trips_loading")}</span>
               </Card>
-            ) : viajes.length === 0 ? (
+            ) : viajesEnCurso.length === 0 ? (
               <Card className="p-6 text-muted-foreground">
                 {t("chofer_trips_empty")}
               </Card>
             ) : (
               <div className="grid gap-4">
-                {viajes.map((viaje) => (
+                {viajesEnCurso.map((viaje) => (
                   <Card key={viaje.id} className="p-5">
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                       <div className="space-y-2">
