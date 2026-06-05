@@ -144,7 +144,7 @@ const T = {
     auth_err_name: "Mínimo 3 caracteres",
     auth_err_cedula: "Cédula ecuatoriana inválida",
     auth_err_phone: "Teléfono inválido",
-    auth_forgot: "¿Olvidaste tu contraseña?",
+    auth_forgot: "-Recuperar Contraseña-",
     auth_forgot_sent: "Revisa tu correo para restablecer tu contraseña.",
     auth_forgot_error: "No se pudo enviar el correo de recuperación.",
     auth_forgot_no_email: "Ingresa tu correo primero.",
