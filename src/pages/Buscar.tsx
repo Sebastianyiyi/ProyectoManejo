@@ -35,6 +35,12 @@ interface Viaje {
     distancia_km: number;
     duracion_minutos: number;
   } | null;
+  // Los viajes programados desde una frecuencia llevan su origen/destino aquí (ruta_id queda null)
+  frecuencias: {
+    ciudad_origen: string;
+    ciudad_destino: string;
+    hora_salida: string;
+  } | null;
   buses: {
     tipo: string;
     capacidad: number;
@@ -85,14 +91,16 @@ export default function Buscar() {
   // Cargar ciudades y perfil del usuario al montar
   useEffect(() => {
     const cargarCiudades = async () => {
-      const { data } = await supabase
-        .from("rutas")
-        .select("ciudad_origen, ciudad_destino");
-      if (data) {
-        const todas = data.flatMap((r) => [r.ciudad_origen, r.ciudad_destino]);
-        const unicas = [...new Set(todas)].sort();
-        setCiudades(unicas);
-      }
+      const [{ data: rutasData }, { data: frecData }] = await Promise.all([
+        supabase.from("rutas").select("ciudad_origen, ciudad_destino"),
+        supabase.from("frecuencias").select("ciudad_origen, ciudad_destino"),
+      ]);
+      const todas = [
+        ...(rutasData ?? []).flatMap((r) => [r.ciudad_origen, r.ciudad_destino]),
+        ...(frecData ?? []).flatMap((f) => [f.ciudad_origen, f.ciudad_destino]),
+      ];
+      const unicas = [...new Set(todas)].sort();
+      setCiudades(unicas);
     };
 
     const cargarDescuentoUsuario = async () => {
@@ -110,6 +118,10 @@ export default function Buscar() {
     cargarDescuentoUsuario();
   }, []);
 
+  // Origen/destino efectivo: el del viaje viene de su ruta o, si no, de su frecuencia.
+  const getOrigen = (v: Viaje) => v.rutas?.ciudad_origen ?? v.frecuencias?.ciudad_origen ?? "";
+  const getDestino = (v: Viaje) => v.rutas?.ciudad_destino ?? v.frecuencias?.ciudad_destino ?? "";
+
   // Consulta de VladAlz con timezone y estado programado
   const buscar = async () => {
     setLoading(true);
@@ -122,6 +134,7 @@ export default function Buscar() {
       .select(`
         id, fecha_salida, fecha_llegada_est, precio_base, estado,
         rutas (ciudad_origen, ciudad_destino, distancia_km, duracion_minutos),
+        frecuencias (ciudad_origen, ciudad_destino, hora_salida),
         buses (tipo, capacidad, placa, numero, marca_chasis, marca_carroceria, cooperativas (id, nombre, logo_url))
       `)
       .eq("estado", "programado")
@@ -161,11 +174,11 @@ export default function Buscar() {
 
     if (origen.trim())
       res = res.filter((v) =>
-        v.rutas?.ciudad_origen?.toLowerCase().includes(origen.trim().toLowerCase())
+        getOrigen(v).toLowerCase().includes(origen.trim().toLowerCase())
       );
     if (destino.trim())
       res = res.filter((v) =>
-        v.rutas?.ciudad_destino?.toLowerCase().includes(destino.trim().toLowerCase())
+        getDestino(v).toLowerCase().includes(destino.trim().toLowerCase())
       );
     if (tipo !== "todos") res = res.filter((v) => v.buses?.tipo === tipo);
 
@@ -267,9 +280,9 @@ export default function Buscar() {
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos" className="focus:bg-primary focus:text-primary-foreground">{t("buscar_all")}</SelectItem>
-                <SelectItem value="normal" className="focus:bg-primary focus:text-primary-foreground">Normal</SelectItem>
-                <SelectItem value="vip" className="focus:bg-primary focus:text-primary-foreground">VIP</SelectItem>
-                <SelectItem value="doble_piso" className="focus:bg-primary focus:text-primary-foreground">Doble Piso</SelectItem>
+                <SelectItem value="economico" className="focus:bg-primary focus:text-primary-foreground">Normal</SelectItem>
+                <SelectItem value="ejecutivo" className="focus:bg-primary focus:text-primary-foreground">VIP</SelectItem>
+                <SelectItem value="premium" className="focus:bg-primary focus:text-primary-foreground">Doble Piso</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -322,7 +335,7 @@ export default function Buscar() {
                         {new Date(v.fecha_salida).toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" })}
                       </div>
                       <div className="text-xs text-muted-foreground flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />{v.rutas?.ciudad_origen}
+                        <MapPin className="h-3 w-3" />{getOrigen(v)}
                       </div>
                     </div>
                     <div className="flex-1 border-t border-dashed border-border relative">
@@ -338,7 +351,7 @@ export default function Buscar() {
                         {new Date(v.fecha_llegada_est).toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" })}
                       </div>
                       <div className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
-                        <Clock className="h-3 w-3" />{v.rutas?.ciudad_destino}
+                        <Clock className="h-3 w-3" />{getDestino(v)}
                       </div>
                     </div>
                   </div>
@@ -408,7 +421,7 @@ export default function Buscar() {
               <div className="space-y-2 text-sm">
                 <p>
                   <span className="font-semibold">Ruta:</span>{" "}
-                  {viajeSeleccionadoInfo.rutas?.ciudad_origen} → {viajeSeleccionadoInfo.rutas?.ciudad_destino}
+                  {getOrigen(viajeSeleccionadoInfo)} → {getDestino(viajeSeleccionadoInfo)}
                 </p>
                 {viajeSeleccionadoInfo.rutas?.distancia_km && (
                   <p>
