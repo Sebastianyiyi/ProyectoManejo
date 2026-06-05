@@ -59,6 +59,10 @@ export default function BoletosPage() {
               rutas (
                 ciudad_origen,
                 ciudad_destino
+              ),
+              frecuencias (
+                ciudad_origen,
+                ciudad_destino
               )
             ),
             usuarios (
@@ -104,13 +108,19 @@ export default function BoletosPage() {
     }
   };
 
+  // Origen/destino del viaje: de su ruta o, si no tiene, de su frecuencia.
+  const getOrigen = (r: any) =>
+    r.viajes?.rutas?.ciudad_origen ?? r.viajes?.frecuencias?.ciudad_origen ?? "";
+  const getDestino = (r: any) =>
+    r.viajes?.rutas?.ciudad_destino ?? r.viajes?.frecuencias?.ciudad_destino ?? "";
+
   const filtered = reservas.filter((r) => {
     if (estadoFiltro !== "Todos" && r.estado !== estadoFiltro) return false;
-    
+
     const searchLower = search.toLowerCase();
     const cliente = (r.usuarios?.full_name ?? "").toLowerCase();
-    const origen = r.viajes?.rutas?.ciudad_origen?.toLowerCase() ?? "";
-    const destino = r.viajes?.rutas?.ciudad_destino?.toLowerCase() ?? "";
+    const origen = getOrigen(r).toLowerCase();
+    const destino = getDestino(r).toLowerCase();
     const boletoId = String(r.id);
 
     return (
@@ -189,7 +199,8 @@ export default function BoletosPage() {
                 {filtered.map((r, i) => {
                   const est = ESTADO_LABEL[r.estado] ?? { text: r.estado, variant: "outline" };
                   const v = r.viajes;
-                  const f = v?.rutas;
+                  const rutaOrigen = getOrigen(r);
+                  const rutaDestino = getDestino(r);
                   const fechaEmision = new Date(r.created_at);
                   const clienteNombre = r.usuarios?.full_name?.trim() || "Usuario anónimo";
 
@@ -204,7 +215,7 @@ export default function BoletosPage() {
                         <div className="text-xs text-muted-foreground font-normal">{r.usuarios?.email}</div>
                       </td>
                       <td className="px-4 py-3">
-                        {f ? `${f.ciudad_origen} → ${f.ciudad_destino}` : "—"}
+                        {rutaOrigen && rutaDestino ? `${rutaOrigen} → ${rutaDestino}` : "—"}
                         <div className="text-xs text-muted-foreground">
                           {v?.fecha_salida ? format(new Date(v.fecha_salida), "dd MMM, HH:mm", { locale: es }) : ""}
                         </div>
@@ -249,7 +260,7 @@ export default function BoletosPage() {
                 <span className="text-muted-foreground">Total a pagar:</span>
                 <span className="font-bold text-primary">${Number(validatingBoleto?.precio_total).toFixed(2)}</span>
                 <span className="text-muted-foreground">Ruta:</span>
-                <span>{validatingBoleto?.viajes?.rutas?.ciudad_origen} → {validatingBoleto?.viajes?.rutas?.ciudad_destino}</span>
+                <span>{validatingBoleto ? `${getOrigen(validatingBoleto)} → ${getDestino(validatingBoleto)}` : "—"}</span>
                 <span className="text-muted-foreground">Fecha del viaje:</span>
                 <span>{validatingBoleto?.viajes?.fecha_salida ? format(new Date(validatingBoleto.viajes.fecha_salida), "dd MMM yyyy, HH:mm", { locale: es }) : "—"}</span>
               </div>
