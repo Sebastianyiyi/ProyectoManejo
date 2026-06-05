@@ -592,7 +592,17 @@ export default function ChoferDashboard() {
   const [registrandoVenta, setRegistrandoVenta] = useState(false);
   const [ventaExitosa, setVentaExitosa] = useState<VentaExitosa | null>(null);
 
-  const viajeVenta = viajes.find((viaje) => String(viaje.id) === viajeVentaId) ?? null;
+  const viajesEnCurso = viajes.filter((viaje) => viaje.estado === "en_curso");
+
+  const viajesCompletados = viajes.filter((viaje) => viaje.estado === "completado");
+
+  const viajesDisponiblesVenta = viajes.filter((viaje) =>
+    ["programado", "en_curso"].includes(viaje.estado)
+  );
+
+
+  const viajeVenta =
+  viajesDisponiblesVenta.find((viaje) => String(viaje.id) === viajeVentaId) ?? null;
 
   const totalVenta = asientosSeleccionados.reduce(
     (total, item) => total + item.precio_unitario,
