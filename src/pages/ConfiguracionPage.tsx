@@ -43,6 +43,8 @@ function CoopConfigCard({ coop }: { coop: Cooperativa }) {
     nombre: coop.nombre,
     ruc: coop.ruc,
     ciudad_principal: coop.ciudad_principal ?? "",
+    telefono: coop.telefono ?? "",
+    direccion: coop.direccion ?? "",
     logo_url: coop.logo_url ?? "",
   });
   const [saving, setSaving] = useState(false);
@@ -78,7 +80,11 @@ function CoopConfigCard({ coop }: { coop: Cooperativa }) {
         nombre: form.nombre.trim(),
         ruc: form.ruc.trim(),
         ciudad_principal: form.ciudad_principal.trim() || null,
+        telefono: form.telefono.trim() || null,
+        direccion: form.direccion.trim() || null,
         logo_url: form.logo_url || null,
+        color_primario: coop.color_primario,
+        color_secundario: coop.color_secundario,
       });
       toast({ title: t("config_coop_saved") });
     } catch (err) {
@@ -112,6 +118,14 @@ function CoopConfigCard({ coop }: { coop: Cooperativa }) {
         <div className="space-y-1">
           <Label>{t("coop_field_city")}</Label>
           <Input value={form.ciudad_principal} onChange={(e) => setForm({ ...form, ciudad_principal: e.target.value })} />
+        </div>
+        <div className="space-y-1">
+          <Label>{t("coop_field_phone")}</Label>
+          <Input value={form.telefono} placeholder="+593 99 999 9999" onChange={(e) => setForm({ ...form, telefono: e.target.value })} />
+        </div>
+        <div className="space-y-1 sm:col-span-2">
+          <Label>{t("coop_field_address")}</Label>
+          <Input value={form.direccion} placeholder="Av. Principal 123, Ciudad" onChange={(e) => setForm({ ...form, direccion: e.target.value })} />
         </div>
         <div className="space-y-1">
           <Label>{t("coop_field_logo")}</Label>

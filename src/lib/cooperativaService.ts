@@ -7,6 +7,10 @@ export interface Cooperativa {
   estado: string;
   ciudad_principal: string | null;
   logo_url: string | null;
+  telefono: string | null;
+  direccion: string | null;
+  color_primario: string;
+  color_secundario: string;
 }
 
 export interface CooperativaUpdate {
@@ -14,16 +18,20 @@ export interface CooperativaUpdate {
   ruc: string;
   ciudad_principal: string | null;
   logo_url: string | null;
+  telefono: string | null;
+  direccion: string | null;
+  color_primario: string;
+  color_secundario: string;
 }
 
-const COLUMNS = "id, nombre, ruc, estado, ciudad_principal, logo_url";
+const SELECT_FIELDS =
+  "id, nombre, ruc, estado, ciudad_principal, logo_url, telefono, direccion, color_primario, color_secundario";
 
 export const cooperativaService = {
-  // La app opera con una única cooperativa: se devuelve la primera no suspendida.
   async get(): Promise<Cooperativa> {
     const { data, error } = await supabase
       .from("cooperativas")
-      .select(COLUMNS)
+      .select(SELECT_FIELDS)
       .neq("estado", "suspendida")
       .order("id", { ascending: true })
       .limit(1)
@@ -37,7 +45,7 @@ export const cooperativaService = {
       .from("cooperativas")
       .update(fields)
       .eq("id", id)
-      .select(COLUMNS)
+      .select(SELECT_FIELDS)
       .single();
     if (error) throw error;
     return data as Cooperativa;

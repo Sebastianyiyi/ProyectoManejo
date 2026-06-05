@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { CooperativaProvider } from "@/contexts/CooperativaContext";
+import ProtectedRoute from "@/components/ui/ProtectedRoute";
 
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -48,41 +49,48 @@ const App = () => (
       <LanguageProvider>
         <AuthProvider>
           <CooperativaProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route element={<Layout />}>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/buscar" element={<Buscar />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/chofer" element={<ChoferDashboard />} />
-                  <Route path="/configuracion" element={<ConfiguracionPage />} />
-                  <Route path="/perfil" element={<PerfilPage />} />
-                  <Route path="/reset-password" element={<ResetPasswordPage />} />
-                  <Route path="/mis-reservas" element={<MisReservas />} />
-                  <Route path="/boleto/:codigo" element={<Boleto />} />
-                  <Route
-                    path="/compra/:viajeId"
-                    element={
-                      <Suspense fallback={<div>Cargando...</div>}>
-                        <PaginaCompra />
-                      </Suspense>
-                    }
-                  />
-                  <Route path="*" element={<NotFound />} />
-                </Route>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route element={<Layout />}>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/buscar" element={<Buscar />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/chofer" element={<ChoferDashboard />} />
+                    <Route path="/configuracion" element={<ConfiguracionPage />} />
+                    <Route path="/perfil" element={<PerfilPage />} />
+                    <Route path="/reset-password" element={<ResetPasswordPage />} />
+                    <Route path="/mis-reservas" element={<MisReservas />} />
+                    <Route path="/boleto/:codigo" element={<Boleto />} />
+                    <Route
+                      path="/compra/:viajeId"
+                      element={
+                        <Suspense fallback={<div>Cargando...</div>}>
+                          <PaginaCompra />
+                        </Suspense>
+                      }
+                    />
+                    <Route path="*" element={<NotFound />} />
+                  </Route>
 
-                <Route path="/dashboard" element={<DashboardLayout />}>
-                  <Route index element={<InicioPage />} />
-                  <Route path="cooperativa" element={<CooperativaPerfilPage />} />
-                  <Route path="buses" element={<BusesPage />} />
-                  <Route path="rutas" element={<RutasPage />} />
-                </Route>
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
+                  <Route path="/dashboard" element={<DashboardLayout />}>
+                    <Route index element={<InicioPage />} />
+                    <Route
+                      path="cooperativa"
+                      element={
+                        <ProtectedRoute allowedRoles={["administrador"]}>
+                          <CooperativaPerfilPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route path="buses" element={<BusesPage />} />
+                    <Route path="rutas" element={<RutasPage />} />
+                  </Route>
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
           </CooperativaProvider>
         </AuthProvider>
       </LanguageProvider>
