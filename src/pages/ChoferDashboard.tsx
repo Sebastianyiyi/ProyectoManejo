@@ -1577,8 +1577,8 @@ export default function ChoferDashboard() {
                 <div>
                   <p className="text-sm text-muted-foreground">{t("chofer_stat_next")}</p>
                   <p className="text-lg font-semibold">
-                    {viajes[0]
-                      ? new Date(viajes[0].fecha_salida).toLocaleDateString()
+                    {viajesDisponiblesVenta[0]
+                      ? new Date(viajesDisponiblesVenta[0].fecha_salida).toLocaleDateString()
                       : t("chofer_stat_no_trips")}
                   </p>
                 </div>
