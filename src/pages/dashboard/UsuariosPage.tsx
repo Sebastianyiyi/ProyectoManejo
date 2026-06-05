@@ -63,6 +63,8 @@ export default function UsuariosPage() {
   useEffect(() => {
     if (user?.id) {
       cargarUsuarios();
+    } else {
+      setLoading(false);
     }
   }, [user?.id]);
 
