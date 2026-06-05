@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import {
   Bus, Map, CalendarClock, Ticket, Clock,
-  CheckCircle, AlertCircle, Pencil, X, Save,
+  CheckCircle, AlertCircle, Save,
 } from "lucide-react";
 
 // ─── Paleta predefinida ───────────────────────────────────────────────────────
@@ -44,13 +44,6 @@ interface ViajeProximo {
   precio_base: number;
   rutas: { ciudad_origen: string; ciudad_destino: string } | null;
   buses: { placa: string } | null;
-}
-
-interface EditForm {
-  nombre: string;
-  telefono: string;
-  direccion: string;
-  logo_url: string;
 }
 
 // ─── Componentes auxiliares ───────────────────────────────────────────────────
@@ -94,12 +87,6 @@ export default function CooperativaPerfilPage() {
   const [proximos, setProximos]       = useState<ViajeProximo[]>([]);
   const [loading, setLoading]         = useState(true);
 
-  const [editMode, setEditMode] = useState(false);
-  const [saving, setSaving]     = useState(false);
-  const [form, setForm]         = useState<EditForm>({
-    nombre: "", telefono: "", direccion: "", logo_url: "",
-  });
-
   const [draftColors, setDraftColors] = useState<ThemeColors>(colors);
 
   // ── Carga inicial ──────────────────────────────────────────────────────────
@@ -109,12 +96,6 @@ export default function CooperativaPerfilPage() {
       try {
         const coop = await cooperativaService.get();
         setCooperativa(coop);
-        setForm({
-          nombre:    coop.nombre,
-          telefono:  coop.telefono ?? "",
-          direccion: coop.direccion ?? "",
-          logo_url:  coop.logo_url ?? "",
-        });
 
         const [
           { count: buses },
@@ -156,43 +137,6 @@ export default function CooperativaPerfilPage() {
   }, [toast]);
 
   useEffect(() => { setDraftColors(colors); }, [colors]);
-
-  // ── Guardar perfil ─────────────────────────────────────────────────────────
-
-  async function handleSaveProfile() {
-    if (!cooperativa) return;
-    setSaving(true);
-    try {
-      const updated = await cooperativaService.update(cooperativa.id, {
-        nombre:           form.nombre.trim(),
-        ruc:              cooperativa.ruc,
-        ciudad_principal: cooperativa.ciudad_principal,
-        logo_url:         form.logo_url.trim() || null,
-        telefono:         form.telefono.trim() || null,
-        direccion:        form.direccion.trim() || null,
-        color_primario:   cooperativa.color_primario,
-        color_secundario: cooperativa.color_secundario,
-      });
-      setCooperativa(updated);
-      setEditMode(false);
-      toast({ title: "Perfil actualizado correctamente" });
-    } catch {
-      toast({ title: "Error al guardar el perfil", variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function handleCancelEdit() {
-    if (!cooperativa) return;
-    setForm({
-      nombre:    cooperativa.nombre,
-      telefono:  cooperativa.telefono ?? "",
-      direccion: cooperativa.direccion ?? "",
-      logo_url:  cooperativa.logo_url ?? "",
-    });
-    setEditMode(false);
-  }
 
   // ── Guardar colores ────────────────────────────────────────────────────────
 
@@ -257,71 +201,7 @@ export default function CooperativaPerfilPage() {
             )}
           </div>
         </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setEditMode((v) => !v)}
-          className="shrink-0"
-        >
-          {editMode ? <X size={14} className="mr-1" /> : <Pencil size={14} className="mr-1" />}
-          {editMode ? "Cancelar" : "Editar perfil"}
-        </Button>
       </div>
-
-      {/* ── Formulario de edición ── */}
-      {editMode && (
-        <Card className="p-5 space-y-4">
-          <h2 className="text-sm font-semibold">Editar información de la cooperativa</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label htmlFor="nombre">Nombre *</Label>
-              <Input
-                id="nombre"
-                value={form.nombre}
-                onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-                placeholder="Nombre de la cooperativa"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="telefono">Teléfono</Label>
-              <Input
-                id="telefono"
-                value={form.telefono}
-                onChange={(e) => setForm((f) => ({ ...f, telefono: e.target.value }))}
-                placeholder="+593 99 999 9999"
-              />
-            </div>
-            <div className="space-y-1 md:col-span-2">
-              <Label htmlFor="direccion">Dirección</Label>
-              <Input
-                id="direccion"
-                value={form.direccion}
-                onChange={(e) => setForm((f) => ({ ...f, direccion: e.target.value }))}
-                placeholder="Av. Principal 123, Ciudad"
-              />
-            </div>
-            <div className="space-y-1 md:col-span-2">
-              <Label htmlFor="logo_url">URL del logo</Label>
-              <Input
-                id="logo_url"
-                value={form.logo_url}
-                onChange={(e) => setForm((f) => ({ ...f, logo_url: e.target.value }))}
-                placeholder="https://..."
-              />
-            </div>
-          </div>
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={saving}>
-              <X size={14} className="mr-1" /> Cancelar
-            </Button>
-            <Button size="sm" onClick={handleSaveProfile} disabled={saving || !form.nombre.trim()}>
-              <Save size={14} className="mr-1" />
-              {saving ? "Guardando..." : "Guardar cambios"}
-            </Button>
-          </div>
-        </Card>
-      )}
 
       {/* ── Estadísticas ── */}
       {stats && (
