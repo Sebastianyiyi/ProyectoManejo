@@ -34,7 +34,7 @@ const T = {
     config_name_required: "El nombre es obligatorio",
     // Index — Hero
     hero_badge: "✨ Boletos de bus en línea, Ecuador",
-    hero_title: "Viaja seguro y rápido por Ecuador",
+    hero_title: "Viaja con nosotros con comodidad y seguridad!",
     hero_subtitle: "Reserva boletos de bus al instante. Pago seguro, asientos garantizados y boleto digital en tu celular.",
     hero_search_required: "Completa todos los campos para buscar",
     // Index — Buscador
